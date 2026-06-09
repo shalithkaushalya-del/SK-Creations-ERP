@@ -1,0 +1,2173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SK Creations - Enterprise Multi-Business ERP Matrix</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        :root {
+            --primary-glow: rgba(212, 175, 55, 0.4);
+            --creations-color: #9b59b6; 
+            --fashion-color: #ff4757;   
+            --digital-color: #00d2d3;   
+            --accent-cod: #ff9f43;
+            --accent-bank: #1dd1a1;
+            --theme-color: #d4af37;
+            --gold-primary: #d4af37;
+            --gold-light: #fef0c3;
+            --gold-dark: #b38728;
+            --gold-gradient: linear-gradient(to right, #bf953f, #fcf6ba, #b38728, #fbf5b7, #aa771c);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+        
+        body { 
+            background-color: #0a0a0a;
+            background-image: radial-gradient(circle at 50% 0%, #1a1a24 0%, #0a0a0a 70%);
+            color: var(--gold-light); display: flex; min-height: 100vh;
+        }
+
+        #loginOverlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(10, 10, 10, 0.95);
+            display: flex; justify-content: center; align-items: center; z-index: 9999;
+        }
+        
+        .login-card {
+            background: rgba(15, 20, 30, 0.85);
+            backdrop-filter: blur(25px); border: 1px solid rgba(212, 175, 55, 0.4);
+            padding: 40px; border-radius: 20px; width: 100%; max-width: 400px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.9), 0 0 25px rgba(212, 175, 55, 0.2); text-align: center;
+        }
+        .login-card h2 { margin-bottom: 10px; font-size: 26px; font-weight: 800; letter-spacing: 1px;
+            background: var(--gold-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-shadow: 0 2px 10px rgba(0,0,0,0.8);
+        }
+        .login-card p { color: var(--gold-primary); font-size: 13px; margin-bottom: 25px; }
+
+        #mainSystem { display: none; width: 100%; min-height: 100vh; }
+        .sidebar { 
+            width: 270px; background-color: #0d0d12;
+            border-right: 2px solid var(--gold-primary); padding: 30px 20px; display: flex; flex-direction: column; gap: 15px;
+            box-shadow: 5px 0 30px rgba(212, 175, 55, 0.25); position: relative; z-index: 10;
+            overflow-y: auto;
+        }
+        .sidebar::-webkit-scrollbar { width: 6px; }
+        .sidebar::-webkit-scrollbar-thumb { background: var(--gold-primary); border-radius: 10px; }
+        
+        .sidebar h2 { 
+            font-size: 24px; text-align: center; background: var(--gold-gradient);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; 
+            font-weight: 900; letter-spacing: 2px; padding-bottom: 25px;
+            border-bottom: 1px solid rgba(212, 175, 55, 0.3); position: relative;
+        }
+        .sidebar h2::after { content: '⚜️'; position: absolute; bottom: -11px; left: 50%; transform: translateX(-50%); font-size: 18px; color: var(--gold-primary); }
+        .user-badge { padding: 8px; background: rgba(212,175,55,0.15); border-radius: 8px; border: 1px solid rgba(212,175,55,0.3); text-align: center; font-size: 12px; color: var(--gold-light); font-weight: 700; margin-bottom: 10px; text-shadow: 0 1px 3px rgba(0,0,0,0.8); }
+        
+        .nav-btn { padding: 14px 18px; border: none; background: transparent; color: var(--gold-primary); text-align: left; font-size: 15px; font-weight: 700; cursor: pointer; border-radius: 12px; transition: all 0.3s; text-shadow: 0 1px 5px rgba(0,0,0,0.8); }
+        .nav-btn:hover { color: var(--gold-light); background: rgba(212, 175, 55, 0.15); }
+        .nav-btn.active { background: linear-gradient(90deg, rgba(212,175,55,0.25) 0%, transparent 100%); color: var(--gold-light); border-left: 4px solid var(--gold-primary); box-shadow: inset 5px 0 15px rgba(212, 175, 55, 0.2); text-shadow: 0 0 10px rgba(212,175,55,0.8); }
+
+        .main-content { flex: 1; padding: 40px; overflow-y: auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 35px; }
+        .header h1 { font-size: 28px; font-weight: 800; color: var(--gold-light); text-shadow: 0 2px 10px rgba(0,0,0,0.8); }
+
+        .biz-hub { display: flex; gap: 12px; background: rgba(15, 20, 30, 0.7); backdrop-filter: blur(10px); padding: 6px; border-radius: 14px; border: 1px solid rgba(212, 175, 55, 0.2); box-shadow: 0 5px 15px rgba(0,0,0,0.4); }
+        .hub-btn { padding: 10px 20px; border: none; border-radius: 10px; font-weight: 700; cursor: pointer; transition: all 0.3s; color: var(--gold-primary); background: transparent; font-size: 14px; }
+        .hub-btn.active { background: var(--gold-primary) !important; color: #111 !important; box-shadow: 0 0 20px rgba(212, 175, 55, 0.6) !important; }
+
+        .app-view { display: none; }
+        .app-view.active { display: block; }
+        .card { background: rgba(15, 20, 30, 0.80); backdrop-filter: blur(20px); padding: 30px; border-radius: 16px; border: 1px solid rgba(212, 175, 55, 0.2); margin-bottom: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.6); }
+        .card h2 { font-size: 18px; margin-bottom: 20px; color: var(--gold-primary); font-weight: 800; letter-spacing: 1px; }
+
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 30px; }
+        .stat-card { background: linear-gradient(180deg, rgba(212,175,55,0.15) 0%, rgba(15,20,30,0.85) 100%); backdrop-filter: blur(15px); padding: 25px 20px; border-radius: 16px; border: 1px solid rgba(212, 175, 55, 0.2); text-align: center; box-shadow: 0 5px 20px rgba(0,0,0,0.4); transition: all 0.3s; }
+        .stat-card h3 { font-size: 13px; color: var(--gold-light); text-transform: uppercase; margin-bottom: 8px; font-weight: 700; letter-spacing: 1px;}
+        .stat-card p { font-size: 24px; font-weight: 800; text-shadow: 0 2px 8px rgba(0,0,0,0.6); transition: all 0.3s; }
+
+        .form-group { margin-bottom: 18px; }
+        .form-row { display: flex; gap: 20px; }
+        .form-row .form-group { flex: 1; }
+        label { display: block; font-weight: 600; font-size: 14px; margin-bottom: 8px; color: var(--gold-primary); }
+        input, select { width: 100%; padding: 12px 16px; border: 1px solid rgba(212, 175, 55, 0.3); border-radius: 10px; font-size: 14px; outline: none; background: rgba(10, 15, 25, 0.9); color: var(--gold-light); font-weight: 600; }
+        input:focus, select:focus { border-color: var(--gold-primary); box-shadow: 0 0 15px rgba(212, 175, 55, 0.4); }
+        input[readonly] { background: rgba(212, 175, 55, 0.05); color: #94a3b8; cursor: not-allowed; border-color: rgba(212, 175, 55, 0.1); }
+        select option { background: #0a0a0a; color: var(--gold-light); }
+
+        .check-group { display: flex; flex-direction: column; gap: 10px; margin-top: 5px; }
+        .check-item { display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 14px; color: var(--gold-light); }
+        .check-item input[type="checkbox"] { width: auto; cursor: pointer; accent-color: var(--gold-primary); }
+
+        .chips { display: flex; gap: 20px; margin-top: 5px; }
+        .chip { flex: 1; padding: 14px; border: 1px solid rgba(212, 175, 55, 0.3); border-radius: 12px; text-align: center; font-weight: 700; cursor: pointer; background: rgba(212, 175, 55, 0.05); color: var(--gold-primary); transition: all 0.3s; }
+        .chip:hover { background: rgba(212, 175, 55, 0.15); color: var(--gold-light); }
+        .chip.selected[data-val="COD"] { background: var(--accent-cod); border-color: var(--accent-cod); color: #111; box-shadow: 0 0 20px rgba(230, 126, 34, 0.5); }
+        .chip.selected[data-val="Bank Transfer"] { background: var(--accent-bank); border-color: var(--accent-bank); color: #111; box-shadow: 0 0 20px rgba(46, 204, 113, 0.5); }
+
+        .btn { width: 100%; padding: 14px; border: none; border-radius: 10px; font-size: 15px; font-weight: 800; color: #111; cursor: pointer; background: var(--theme-color); box-shadow: 0 5px 20px rgba(212, 175, 55, 0.4); transition: all 0.3s; }
+        .btn:hover { filter: brightness(1.2); transform: translateY(-2px); box-shadow: 0 8px 25px rgba(212, 175, 55, 0.6); }
+
+        .action-btns { display: flex; gap: 8px; }
+        .action-btn { padding: 6px 12px; border: none; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; color: #111; transition: all 0.2s; }
+        .action-btn:hover { transform: scale(1.05); }
+        .edit-btn { background: var(--gold-primary); }
+        .delete-btn { background: #e74c3c; color: var(--gold-light); }
+
+        .status-badge { padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 800; cursor: pointer; transition: all 0.3s; display: inline-block; }
+        .badge-pending { background: rgba(243, 156, 18, 0.2); color: #f39c12; border: 1px solid #f39c12; }
+        .badge-processing { background: rgba(52, 152, 219, 0.2); color: #3498db; border: 1px solid #3498db; }
+        .badge-ready { background: rgba(155, 89, 182, 0.2); color: #9b59b6; border: 1px solid #9b59b6; }
+        .badge-delivered { background: rgba(46, 204, 113, 0.2); color: #2ecc71; border: 1px solid #2ecc71; }
+
+        table { width: 100%; border-collapse: collapse; text-align: left; margin-top: 10px; }
+        th, td { padding: 14px; border-bottom: 1px solid rgba(212, 175, 55, 0.2); font-size: 14px; color: var(--gold-light); }
+        th { background: rgba(212, 175, 55, 0.1); color: var(--gold-primary); font-weight: 800; text-transform: uppercase; font-size: 13px; }
+
+        .printable-invoice {
+            background-color: #0a0a0a !important;
+            color: var(--gold-light) !important;
+            padding: 40px; border-radius: 12px; border: 1px solid rgba(212, 175, 55, 0.4); box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            width: 100%; max-width: 210mm; min-height: 800px; margin: 0 auto; display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important;
+        }
+        
+        .kb-card { background: rgba(10,15,25,0.9); border: 1px solid rgba(212,175,55,0.2); padding: 15px; border-radius: 10px; margin-bottom: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.4); }
+    </style>
+</head>
+<body>
+    <div id="loginOverlay">
+        <div class="login-card">
+            <h2>SK Creations</h2>
+            <p id="loginStatusText">Synchronizing core parameters...</p>
+            <div class="form-group" style="text-align:left;">
+                <label>User Login Identifier</label>
+                <input type="text" id="loginUser" placeholder="Username">
+            </div>
+            <div class="form-group" style="text-align:left;">
+                <label>Security Keyphrase (Password)</label>
+                <input type="password" id="loginPass" placeholder="••••••••">
+            </div>
+            <button onclick="attemptSystemAuthentication()" class="btn" style="background:var(--gold-gradient); color:#111;">Authenticate Session</button>
+        </div>
+    </div>
+
+    <div id="mainSystem">
+        <div style="display: flex; min-height: 100vh;">
+            <div class="sidebar">
+                <h2>SK Creations</h2>
+                <div class="user-badge" id="sessionBadge">User: Security Node</div>
+                <button class="nav-btn active" id="btn_dashboard" onclick="switchView('dashboard', this)">📊 Dashboard</button>
+                <button class="nav-btn" id="btn_workflow-view" onclick="switchView('workflow-view', this)">🏭 Production Board</button>
+                <button class="nav-btn" id="btn_sales-view" onclick="switchView('sales-view', this)">🧾 Create Invoice</button>
+                <button class="nav-btn" id="btn_combined-view" onclick="switchView('combined-view', this)">🔥 SK Creations Invoice</button>
+                <button class="nav-btn" id="btn_quotation-view" onclick="switchView('quotation-view', this)">📝 Quotations Hub</button>
+                <button class="nav-btn" id="btn_delivery-view" onclick="switchView('delivery-view', this)">🚚 Logistics Hub</button>
+                <button class="nav-btn" id="btn_bom-view" onclick="switchView('bom-view', this)">🛠️ Raw Materials & BOM</button>
+                <button class="nav-btn" id="btn_stock-view" onclick="switchView('stock-view', this)">📦 Stock Manager</button>
+                <button class="nav-btn" id="btn_customer-view" onclick="switchView('customer-view', this)">👥 Customer Hub</button>
+                <button class="nav-btn" id="btn_expenses-view" onclick="switchView('expenses-view', this)">💰 Finance & Expenses</button>
+                <button class="nav-btn" id="btn_payroll-view" onclick="switchView('payroll-view', this)">💼 HR & Payroll</button>
+                <button class="nav-btn" id="btn_pnl-view" onclick="switchView('pnl-view', this)">📈 Financial Analytics</button>
+                <button class="nav-btn" id="btn_users-view" onclick="switchView('users-view', this)">👤 User Settings</button>
+                <button class="nav-btn" onclick="logoutSystem()" style="margin-top:auto; color:#ff4757; background:rgba(255,71,87,0.1);">🔓 Terminate Session</button>
+            </div>
+
+            <div class="main-content">
+                <div class="header">
+                    <h1 id="pageTitle">Dashboard</h1>
+                    <div style="display:flex; align-items:center; gap: 15px;">
+                        <button onclick="exportDataToExcel()" class="btn" style="width:auto; padding:10px 18px; font-size:13px; background:#2ecc71; color:#fff; box-shadow:0 4px 10px rgba(46,204,113,0.3);">📥 Export Data to Excel</button>
+                        <div class="biz-hub" id="topBizSwitcher">
+                            <button class="hub-btn active" data-biz="SK Crafts" onclick="switchBiz('SK Crafts')">🎨 SK Crafts</button>
+                            <button class="hub-btn" data-biz="SK Fashion" onclick="switchBiz('SK Fashion')">👕 SK Fashion</button>
+                            <button class="hub-btn" data-biz="SK Digital" onclick="switchBiz('SK Digital')">⚡ SK Digital</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="dashboard" class="app-view active">
+                    <div class="card" style="margin-bottom: 25px; padding: 20px; border: 1px dashed rgba(212, 175, 55, 0.4);">
+                        <h3 style="font-size: 14px; color:var(--gold-primary); margin-bottom: 15px; text-transform:uppercase; letter-spacing: 1px;">📅 Filter Dashboard Data by Date</h3>
+                        <div class="form-row" style="align-items: flex-end;">
+                            <div class="form-group" style="margin-bottom:0;"><label>From Date</label><input type="date" id="filterFrom"></div>
+                            <div class="form-group" style="margin-bottom:0;"><label>To Date</label><input type="date" id="filterTo"></div>
+                            <div class="form-group" style="margin-bottom:0; width: 120px;">
+                                <button onclick="applyDateFilter()" class="btn" style="padding: 12px; background:var(--gold-primary); color:#111;">Apply Filter</button>
+                            </div>
+                            <div class="form-group" style="margin-bottom:0; width: 120px;">
+                                <button onclick="clearDateFilter()" class="btn" style="padding: 12px; background:rgba(255,71,87,0.1); color:#ff4757; border: 1px solid #ff4757; box-shadow:none;">Clear</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="stats-grid">
+                        <div class="stat-card" style="border-top: 4px solid var(--gold-primary);">
+                            <h3 style="color: var(--gold-light);">Total Sales</h3>
+                            <p id="statSales" style="color: var(--gold-primary); text-shadow: 0 0 15px rgba(212,175,55,0.6);">Rs. 0</p>
+                        </div>
+                        <div class="stat-card" style="border-top: 4px solid var(--gold-primary);">
+                            <h3 style="color: var(--gold-light);">Total Expenses</h3>
+                            <p id="statExpenses" style="color: var(--gold-primary); text-shadow: 0 0 15px rgba(212,175,55,0.6);">Rs. 0</p>
+                        </div>
+                        <div class="stat-card" id="profitCard" style="border-top: 4px solid #1dd1a1;">
+                            <h3 id="statProfitLabel" style="color: #1dd1a1;">Net Profit</h3>
+                            <p id="statProfit" style="color: #1dd1a1; text-shadow: 0 0 15px rgba(29,209,161,0.6);">Rs. 0</p>
+                        </div>
+                        <div class="stat-card" id="stockAlertCard" style="border-top: 4px solid var(--theme-color);">
+                            <h3 style="color: var(--gold-light);">Low Stock Items</h3>
+                            <p id="statStock" style="color: var(--theme-color); text-shadow: 0 0 15px rgba(255,255,255,0.2);">0</p>
+                        </div>
+                    </div>
+
+                    <div class="form-row" style="margin-bottom: 25px;">
+                        <div class="card" style="flex: 2; margin-bottom: 0;">
+                            <h2>📊 Revenue vs Expenses Overview</h2>
+                            <canvas id="mainBarChart" style="width:100%; max-height:280px;"></canvas>
+                        </div>
+                        <div class="card" style="flex: 1; margin-bottom: 0;">
+                            <h2>💰 Expense Breakdown</h2>
+                            <canvas id="expensePieChart" style="width:100%; max-height:280px;"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="card" style="margin-bottom: 25px; border: 1px solid rgba(212, 175, 55, 0.3);">
+                        <label style="color:var(--gold-primary); font-size:13px; font-weight:700;">Select Search Registry Node:</label>
+                        <div style="display: flex; gap: 10px; margin-top: 6px; margin-bottom: 20px; flex-wrap: wrap;">
+                            <button type="button" id="searchTab_comb" class="hub-btn active" style="background:var(--gold-primary); color:#111;" onclick="setSearchPrefix('COMB-', this)">✨ SK Creations (All)</button>
+                            <button type="button" class="hub-btn" style="background:rgba(212,175,55,0.1);" onclick="setSearchPrefix('SKC-', this)">🎨 SK Crafts</button>
+                            <button type="button" class="hub-btn" style="background:rgba(212,175,55,0.1);" onclick="setSearchPrefix('SKF-', this)">👕 SK Fashion</button>
+                            <button type="button" class="hub-btn" style="background:rgba(212,175,55,0.1);" onclick="setSearchPrefix('SKD-', this)">⚡ SK Digital</button>
+                        </div>
+                        <h2>🔍 Search & Preview Past Invoices</h2>
+                        <div class="form-row" style="align-items: flex-end; margin-bottom: 0;">
+                            <div class="form-group" style="flex: 3; margin-bottom: 0;">
+                                <label>Enter Invoice Number</label>
+                                <input type="text" id="searchInvoiceInput" value="COMB-" placeholder="Ex: SKC-1001 / SKF-1002 / COMB-1001">
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <button onclick="searchInvoiceLogic()" class="btn" style="padding: 12px 25px; background:var(--gold-primary); color:#111;">Search Order</button>
+                            </div>
+                        </div>
+                        <div id="searchResultBox" style="display: none; margin-top: 20px;"></div>
+                    </div>
+                    
+                    <div class="card">
+                        <h2>Order History</h2>
+                        <div style="max-height: 350px; overflow-y: auto; padding-right: 5px;">
+                            <table style="position: relative;">
+                                <thead style="position: sticky; top: 0; background: rgba(15, 20, 30, 0.98); z-index: 2;">
+                                    <tr><th>Inv No</th><th>Date</th><th>Customer</th><th>Item Description</th><th>Amount</th><th>Status</th></tr>
+                                </thead>
+                                <tbody id="recentSalesTable"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="workflow-view" class="app-view">
+                    <div class="card" style="background:transparent; border:none; box-shadow:none; padding:0;">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:20px;">
+                            <div>
+                                <h2 style="font-size:22px; margin-bottom:5px;">🏭 Production & Task Workflow</h2>
+                                <p style="color:var(--gold-primary); font-size:13px;">Manage crafting and printing stages for active orders.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="kanban-board" style="display: flex; gap: 20px; overflow-x: auto; padding-bottom: 20px; align-items: flex-start;">
+                            <div style="flex: 1; min-width: 280px; background: rgba(243, 156, 18, 0.08); border-radius: 12px; padding: 15px; border-top: 4px solid #f39c12; border-left: 1px solid rgba(243,156,18,0.2); border-right: 1px solid rgba(243,156,18,0.2);">
+                                <h3 style="color:#f39c12; margin-bottom: 15px; font-size: 15px; display:flex; justify-content:space-between; align-items:center;">
+                                    <span>📥 Pending Orders</span> 
+                                    <span id="kb-count-pending" style="background:#f39c12; color:#111; padding:2px 8px; border-radius:10px; font-size:12px; font-weight:bold;">0</span>
+                                </h3>
+                                <div id="kb-pending" style="min-height: 200px;"></div>
+                            </div>
+                            
+                            <div style="flex: 1; min-width: 280px; background: rgba(52, 152, 219, 0.08); border-radius: 12px; padding: 15px; border-top: 4px solid #3498db; border-left: 1px solid rgba(52,152,219,0.2); border-right: 1px solid rgba(52,152,219,0.2);">
+                                <h3 style="color:#3498db; margin-bottom: 15px; font-size: 15px; display:flex; justify-content:space-between; align-items:center;">
+                                    <span>⚙️ In Production</span> 
+                                    <span id="kb-count-processing" style="background:#3498db; color:#111; padding:2px 8px; border-radius:10px; font-size:12px; font-weight:bold;">0</span>
+                                </h3>
+                                <div id="kb-processing" style="min-height: 200px;"></div>
+                            </div>
+
+                            <div style="flex: 1; min-width: 280px; background: rgba(155, 89, 182, 0.08); border-radius: 12px; padding: 15px; border-top: 4px solid #9b59b6; border-left: 1px solid rgba(155,89,182,0.2); border-right: 1px solid rgba(155,89,182,0.2);">
+                                <h3 style="color:#9b59b6; margin-bottom: 15px; font-size: 15px; display:flex; justify-content:space-between; align-items:center;">
+                                    <span>📦 Ready for Dispatch</span> 
+                                    <span id="kb-count-ready" style="background:#9b59b6; color:#fff; padding:2px 8px; border-radius:10px; font-size:12px; font-weight:bold;">0</span>
+                                </h3>
+                                <div id="kb-ready" style="min-height: 200px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="bom-view" class="app-view">
+                    <div class="card" id="rawInputCard">
+                        <h2 id="rawFormTitle">Add / Update Raw Materials</h2>
+                        <form onsubmit="saveRawMaterialLogic(event)" id="rawActualForm" class="form-row" style="align-items:flex-end;">
+                            <input type="hidden" id="editingRawIndex" value="">
+                            <div class="form-group" style="flex:2;"><label>Material Name</label><input type="text" id="rName" placeholder="Ex: Epoxy Resin / Blank Black Cap" required></div>
+                            <div class="form-group"><label>Total Quantity Added</label><input type="number" id="rQty" step="0.01" min="0" required></div>
+                            <div class="form-group">
+                                <label>Unit of Measure</label>
+                                <select id="rUnit" required>
+                                    <option value="Grams (g)">Grams (g)</option>
+                                    <option value="Kilograms (Kg)">Kilograms (Kg)</option>
+                                    <option value="Pieces (Pcs)">Pieces (Pcs)</option>
+                                    <option value="Meters (m)">Meters (m)</option>
+                                    <option value="Liters (L)">Liters (L)</option>
+                                </select>
+                            </div>
+                            <div class="form-group"><label>Total Cost for this Qty (Rs.)</label><input type="number" id="rPrice" step="0.01" required></div>
+                            <div class="form-group"><button type="submit" class="btn" style="padding:12px 20px;" id="rawFormSubmitBtn">Save Material</button></div>
+                        </form>
+                    </div>
+
+                    <div class="card">
+                        <h2>Costing Calculator (Bill of Materials)</h2>
+                        <div style="background: rgba(212,175,55,0.05); padding: 15px; border-radius: 10px; border: 1px dashed rgba(212,175,55,0.3); margin-bottom:15px;">
+                            <div class="form-row" style="align-items: flex-end;">
+                                <div class="form-group" style="flex:2;"><label>Select Material</label><select id="bomMatSelect"></select></div>
+                                <div class="form-group"><label>Qty Used for this item</label><input type="number" step="0.01" id="bomQtyUsed" value="1"></div>
+                                <div class="form-group"><button type="button" onclick="addToBomCalculator()" class="btn" style="background:var(--gold-primary); color:#111;">+ Add to Cost</button></div>
+                            </div>
+                            <ul id="bomList" style="list-style:none; padding:10px 0; color:var(--gold-light); font-size:14px;"></ul>
+                            <div style="display:flex; justify-content:space-between; font-size:16px; font-weight:700; color:var(--gold-primary); border-top:1px solid rgba(212,175,55,0.2); padding-top:10px; margin-top:10px;">
+                                <span>Total Estimated Material Cost:</span><span id="bomTotalCost">Rs. 0.00</span>
+                            </div>
+                        </div>
+                        <button class="btn" style="background:rgba(231,76,60,0.2); color:#e74c3c; border:1px solid #e74c3c; box-shadow:none; width:auto; padding:10px 20px; float:right;" onclick="clearBomCalculator()">Clear Calculator</button>
+                        <div style="clear:both;"></div>
+                    </div>
+
+                    <div class="card">
+                        <h2>Raw Materials Inventory Levels</h2>
+                        <table>
+                            <thead><tr><th>Material Name</th><th>Stock In Hand</th><th>Calculated Unit Price</th><th class="action-header">Actions</th></tr></thead>
+                            <tbody id="rawTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="delivery-view" class="app-view">
+                    <div class="card">
+                        <h2>Assign Courier for Dispatched Orders</h2>
+                        <form onsubmit="saveDeliveryLogic(event)" class="form-row" style="align-items:flex-end;">
+                            <div class="form-group" style="flex:1;">
+                                <label>Invoice No</label>
+                                <select id="delInvNo" required onchange="autoFillDeliveryCod()">
+                                    <option value="">-- Select Order --</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="flex:1;">
+                                <label>Courier Service</label>
+                                <select id="delCourier" required>
+                                    <option value="Iexpress Domestic">🚚 Iexpress Domestic</option>
+                                    <option value="Prompt Express">🚚 Prompt Express</option>
+                                    <option value="Certis Lanka">🚚 Certis Lanka</option>
+                                    <option value="Domex">🚚 Domex</option>
+                                    <option value="Self / Pick-up">🛍️ Self / Pick-up</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="flex:1;"><label>Tracking Number</label><input type="text" id="delTracking" placeholder="Ex: IEX12345678" required></div>
+                            <div class="form-group" style="flex:1;"><label>COD Value (Rs.)</label><input type="number" id="delCod" min="0" value="0"></div>
+                            <div class="form-group" style="width: 140px;"><button type="submit" class="btn" style="padding:12px; background:var(--accent-bank); color:#111;">Dispatch</button></div>
+                        </form>
+                    </div>
+                    <div class="card">
+                        <h2>Active Delivery Log</h2>
+                        <table>
+                            <thead><tr><th>Invoice No</th><th>Courier & Tracking</th><th>COD Value</th><th>Delivery Status</th><th>COD Status</th></tr></thead>
+                            <tbody id="deliveryTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="quotation-view" class="app-view">
+                    <div class="card">
+                        <h2>Saved Quotations Manager</h2>
+                        <table>
+                            <thead><tr><th>Quote No</th><th>Date</th><th>Customer</th><th>Total Value</th><th>Status</th><th>Actions</th></tr></thead>
+                            <tbody id="quotationTableBody"></tbody>
+                        </table>
+                    </div>
+                    <div class="card">
+                        <h2>Quotation Print Preview</h2>
+                        <div id="quotationBillBox">
+                            <p style="text-align:center; color:var(--gold-light); padding-top:40px; padding-bottom:40px; border: 1px dashed rgba(212,175,55,0.3); border-radius:10px;">Select '👁️ View' on a quotation to preview it here.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="payroll-view" class="app-view">
+                    <div class="card">
+                        <h2>Add Staff Salary / Advance Payment</h2>
+                        <form onsubmit="savePayrollLogic(event)" class="form-row" style="align-items:flex-end;">
+                            <div class="form-group" style="flex:2;"><label>Staff Member Name</label><input type="text" id="prName" placeholder="Ex: Kamal / Nimal" required></div>
+                            <div class="form-group"><label>Date</label><input type="date" id="prDate" required></div>
+                            <div class="form-group">
+                                <label>Payment Type</label>
+                                <select id="prType" required>
+                                    <option value="Monthly Salary">Monthly Salary</option>
+                                    <option value="Advance Payment">Advance Payment</option>
+                                    <option value="Bonus / Commission">Bonus / Commission</option>
+                                </select>
+                            </div>
+                            <div class="form-group"><label>Amount (Rs.)</label><input type="number" id="prAmount" min="0" required></div>
+                            <div class="form-group"><button type="submit" class="btn" style="padding:12px 20px; background:#3498db; color:#fff; box-shadow: 0 5px 20px rgba(52,152,219,0.4);">Save Record</button></div>
+                        </form>
+                    </div>
+                    <div class="card">
+                        <h2>Staff Payroll Ledger</h2>
+                        <table>
+                            <thead><tr><th>Date</th><th>Staff Name</th><th>Payment Type</th><th>Amount (Rs.)</th><th>Action</th></tr></thead>
+                            <tbody id="payrollTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="sales-view" class="app-view">
+                    <div class="card">
+                        <h2>New Order & Invoice Setup</h2>
+                        <form onsubmit="saveNewOrder(event)">
+                            <div class="form-row">
+                                <div class="form-group"><label>Invoice / Quote Number</label><input type="text" id="invNo" readonly></div>
+                                <div class="form-group"><label>Date</label><input type="date" id="invDate" required></div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group"><label>Select Customer</label><select id="invCustomer" onchange="autoFillCustomerAddress()" required></select></div>
+                                <div class="form-group"><label>Delivery Address</label><input type="text" id="invAddress" readonly placeholder="Customer Address auto-populates"></div>
+                            </div>
+                            <div style="background: rgba(212,175,55,0.05); padding: 20px; border-radius: 12px; border: 1px solid rgba(212,175,55,0.2); margin-bottom: 20px;">
+                                <h3 style="font-size: 14px; color:var(--gold-primary); margin-bottom: 12px;">🛒 Add Products to Order / Quotation</h3>
+                                <div class="form-row" style="align-items: flex-end;">
+                                    <div class="form-group" style="flex:2;"><label>Select Product Item</label><select id="invItem" onchange="autoFillPrice()"></select></div>
+                                    <div class="form-group"><label>Unit Rate (Rs.)</label><input type="number" id="invPrice" required></div>
+                                    <div class="form-group" style="width: 100px;"><label>Qty</label><input type="number" id="invQty" min="1" value="1"></div>
+                                    <div class="form-group"><button type="button" onclick="addSingleItemToCart()" class="btn" style="background: var(--gold-primary); color:#111; padding: 12px 20px;">+ Add To Bill</button></div>
+                                </div>
+                            </div>
+                            <div style="margin-bottom: 20px;">
+                                <table style="background: rgba(10,15,25,0.5); border-radius: 8px;">
+                                    <thead><tr><th>Item Name</th><th>Unit Rate</th><th>Qty</th><th>Subtotal</th><th>Action</th></tr></thead>
+                                    <tbody id="singleCartBody"><tr><td colspan="5" style="text-align:center; color:var(--gold-light);">Cart is empty. Add items from above.</td></tr></tbody>
+                                </table>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group"><label>Sub Total (Rs.)</label><input type="number" id="invTotal" readonly value="0"></div>
+                                <div class="form-group"><label style="color:#e74c3c;">Discount / Offers (Rs.)</label><input type="number" id="invDiscount" min="0" value="0" oninput="liveCalcTotal()"></div>
+                            </div>
+                            <div class="form-row" style="background: rgba(212,175,55,0.05); padding: 15px; border-radius: 10px; border: 1px dashed rgba(212,175,55,0.3);">
+                                <div class="form-group" style="margin-bottom:0;"><label style="color:#1dd1a1;">Paid Amount (Advance) Rs.</label><input type="number" id="invPaid" min="0" value="0" oninput="liveCalcTotal()" required></div>
+                                <div class="form-group" style="margin-bottom:0;"><label style="color:#ff9f43;">Balance Due (Rs.)</label><input type="number" id="invBalance" readonly value="0"></div>
+                            </div>
+                            <div class="form-group" style="margin-top: 18px;">
+                                <label>Payment Method</label>
+                                <div class="chips">
+                                    <div class="chip" data-val="COD" onclick="selectPaymentMethod('COD')">📦 COD</div>
+                                    <div class="chip" data-val="Bank Transfer" onclick="selectPaymentMethod('Bank Transfer')">🏦 Bank Transfer</div>
+                                </div>
+                                <input type="hidden" id="invPayment" required>
+                            </div>
+                            
+                            <div style="display:flex; gap:15px; margin-top:15px;">
+                                <button type="submit" class="btn" id="submitOrderBtn" style="flex:2;">Save Order & Build Invoice</button>
+                                <button type="button" onclick="saveAsQuotationLogic('single')" class="btn" style="flex:1; background:#3498db; color:#fff; box-shadow: 0 5px 20px rgba(52,152,219,0.4);">📄 Save Draft Quotation</button>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="card">
+                        <h2>Generated Invoice Bill Preview</h2>
+                        <div id="invoiceBillBox">
+                            <p style="text-align:center; color:var(--gold-light); padding-top:40px;">Bill template renders here post execution.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="combined-view" class="app-view">
+                    <div class="card">
+                        <h2>SK Creations Universal Invoice Setup</h2>
+                        <form onsubmit="saveCombinedOrder(event)">
+                            <div class="form-row">
+                                <div class="form-group"><label>Universal Invoice / Quote No</label><input type="text" id="combNo" readonly value="COMB-1001"></div>
+                                <div class="form-group"><label>Date</label><input type="date" id="combDate" required></div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group"><label>Select Customer</label><select id="combCustomer" onchange="autoFillCombCustomerAddress()" required></select></div>
+                                <div class="form-group"><label>Delivery Address</label><input type="text" id="combAddress" readonly placeholder="Customer Address auto-populates"></div>
+                            </div>
+                            <div style="background: rgba(212,175,55,0.05); padding: 20px; border-radius: 12px; border: 1px solid rgba(212,175,55,0.2); margin-bottom: 20px;">
+                                <h3 style="font-size: 14px; color:var(--gold-primary); margin-bottom: 12px;">🛒 Add Items From Any Business Node</h3>
+                                <div class="form-row" style="align-items: flex-end;">
+                                    <div class="form-group">
+                                        <label>Target Node</label>
+                                        <select id="combNodeSelect" onchange="updateCombItemDropdown()">
+                                            <option value="SK Crafts">🎨 SK Crafts</option>
+                                            <option value="SK Fashion">👕 SK Fashion</option>
+                                            <option value="SK Digital">⚡ SK Digital</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group" style="flex:2;">
+                                        <label>Select Product</label>
+                                        <select id="combItemSelect" onchange="autoFillCombPrice()"></select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Unit Rate (Rs.)</label>
+                                        <input type="number" id="combPriceInput" required>
+                                    </div>
+                                    <div class="form-group" style="width: 80px;">
+                                        <label>Qty</label>
+                                        <input type="number" id="combQtyInput" min="1" value="1">
+                                    </div>
+                                    <div class="form-group">
+                                        <button type="button" onclick="addItemToCartGrid()" class="btn" style="background: var(--gold-primary); color:#111; padding: 12px 20px;">+ Add To Bill</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="margin-bottom: 20px;">
+                                <h3 style="font-size: 15px; margin-bottom: 10px; color:var(--gold-primary);">Items Added to Cart</h3>
+                                <table style="background: rgba(10,15,25,0.5); border-radius: 8px;">
+                                    <thead><tr><th>Node</th><th>Item Name</th><th>Unit Rate</th><th>Qty</th><th>Subtotal</th><th>Action</th></tr></thead>
+                                    <tbody id="cartTableBody">
+                                        <tr><td colspan="6" style="text-align:center; color:var(--gold-light);">Cart is empty. Add items from above.</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group"><label>Cart Sub Total (Rs.)</label><input type="number" id="combTotalBill" readonly value="0"></div>
+                                <div class="form-group"><label style="color:#e74c3c;">Discount / Offers (Rs.)</label><input type="number" id="combDiscount" min="0" value="0" oninput="liveCalcCombTotal()"></div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group"><label style="color:#1dd1a1;">Paid Amount (Advance) Rs.</label><input type="number" id="combPaidInput" min="0" value="0" oninput="liveCalcCombTotal()" required></div>
+                                <div class="form-group"><label style="color:#ff9f43;">Balance Due (Rs.)</label><input type="number" id="combBalanceBill" readonly value="0"></div>
+                            </div>
+                            <div class="form-group">
+                                <label>Payment Method</label>
+                                <select id="combPaymentMethod" required>
+                                    <option value="COD">📦 COD (Cash on Delivery)</option>
+                                    <option value="Bank Transfer">🏦 Bank Transfer</option>
+                                </select>
+                            </div>
+                            <div style="display:flex; gap:15px; margin-top:15px;">
+                                <button type="submit" class="btn" style="flex:2; background: #10b981; color:#111;">Complete & Generate Universal Invoice</button>
+                                <button type="button" onclick="saveAsQuotationLogic('combined')" class="btn" style="flex:1; background:#3498db; color:#fff; box-shadow: 0 5px 20px rgba(52,152,219,0.4);">📄 Save Draft Quotation</button>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="card">
+                        <h2>Generated SK Creations Invoice Preview</h2>
+                        <div id="combinedInvoiceBillBox">
+                            <p style="text-align:center; color:var(--gold-light); padding-top:40px;">Universal bill template renders here post execution.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="pnl-view" class="app-view">
+                    <div class="card" id="pnlPrintArea">
+                        <h2>Automated Profit & Loss (P&L) Statement</h2>
+                        <div class="form-row print-hide" style="margin-bottom: 25px; align-items: flex-end;">
+                            <div class="form-group" style="margin-bottom:0;">
+                                <label>Select Analytics Month</label>
+                                <input type="month" id="pnlMonth" onchange="reRenderEntireUI()">
+                            </div>
+                            <div class="form-group" style="margin-bottom:0;">
+                                <button onclick="clearPnLFilter()" class="btn" style="padding: 12px; background:rgba(255,71,87,0.1); color:#ff4757; border: 1px solid #ff4757; box-shadow:none;">Clear Filter</button>
+                            </div>
+                        </div>
+
+                        <div style="border: 1px solid rgba(212,175,55,0.3); border-radius: 12px; overflow: hidden;">
+                            <table style="margin-top: 0;">
+                                <tbody>
+                                    <tr style="background: rgba(212,175,55,0.15);"><td colspan="2"><strong style="color:var(--gold-primary); font-size:15px;">1. REVENUE (SALES)</strong></td></tr>
+                                    <tr><td>Total Gross Sales Generated</td><td style="text-align:right; font-weight:700;" id="pnlGrossSales">Rs. 0.00</td></tr>
+                                    <tr><td>Total Discounts & Offers Given</td><td style="text-align:right; color:#e74c3c; font-weight:700;" id="pnlDiscounts">- Rs. 0.00</td></tr>
+                                    <tr style="border-top: 1px dashed rgba(212,175,55,0.3);"><td style="padding-top:15px; padding-bottom:15px;"><strong>Total Net Revenue</strong></td><td style="text-align:right; font-weight:800; color:var(--gold-light); font-size:15px;" id="pnlNetRev">Rs. 0.00</td></tr>
+
+                                    <tr style="background: rgba(212,175,55,0.15); border-top: 2px solid var(--gold-primary);"><td colspan="2"><strong style="color:var(--gold-primary); font-size:15px;">2. OPERATING EXPENSES</strong></td></tr>
+                                    <tbody id="pnlExpensesList">
+                                    </tbody>
+                                    <tr style="border-top: 1px dashed rgba(212,175,55,0.3);"><td style="padding-top:15px; padding-bottom:15px;"><strong>Total Operating Expenses</strong></td><td style="text-align:right; font-weight:800; color:#ff4757; font-size:15px;" id="pnlTotalExp">Rs. 0.00</td></tr>
+
+                                    <tr style="background: rgba(15, 20, 30, 0.95); border-top: 2px solid var(--gold-primary);"><td style="padding: 25px 15px;"><strong style="font-size:18px; color:var(--gold-light);">NET PROFIT / (LOSS)</strong></td><td style="text-align:right; padding: 25px 15px; font-size:22px; font-weight:900;" id="pnlNetProfit">Rs. 0.00</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="expenses-view" class="app-view">
+                    <div class="card">
+                        <h2>Add New Business Expense</h2>
+                        <form onsubmit="saveExpenseLogic(event)" class="form-row" style="align-items:flex-end;">
+                            <div class="form-group"><label>Date</label><input type="date" id="eDate" required></div>
+                            <div class="form-group" style="flex:2;">
+                                <label>Expense Description</label>
+                                <select id="eDesc" required>
+                                    <option value="">-- Select Expense Category --</option>
+                                    <option value="Raw Materials & Restocks">📦 Raw Materials & Restocks</option>
+                                    <option value="Packaging & Materials">🛍️ Packaging & Materials</option>
+                                    <option value="Courier & Delivery Charges">🚚 Courier & Delivery Charges</option>
+                                    <option value="Advertising & Boosts">📢 Advertising & Boosts</option>
+                                    <option value="Equipment & Maintenance">⚙️ Equipment & Maintenance</option>
+                                    <option value="Utilities (Internet, Electricity)">🔌 Utilities (Internet, Electricity)</option>
+                                    <option value="Staff & Labor">👥 Staff & Labor</option>
+                                    <option value="Other / Miscellaneous">📝 Other / Miscellaneous</option>
+                                </select>
+                            </div>
+                            <div class="form-group"><label>Amount (Rs.)</label><input type="number" id="eAmount" min="0" required></div>
+                            <div class="form-group"><button type="submit" class="btn" style="padding:12px 20px; background:#ff4757; color:#fff; box-shadow: 0 5px 20px rgba(255,71,87,0.4);">Add Expense</button></div>
+                        </form>
+                    </div>
+                    <div class="card">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <h2 style="margin-bottom: 0;">Recent Expenses Ledger</h2>
+                            <button onclick="exportExpensesToExcel()" class="btn" style="width:auto; padding:8px 15px; font-size:12px; background:#2ecc71; color:#fff; box-shadow:0 4px 10px rgba(46,204,113,0.3);">📥 Download Expenses Report</button>
+                        </div>
+                        <table>
+                            <thead><tr><th>Date</th><th>Description</th><th>Amount</th><th>Action</th></tr></thead>
+                            <tbody id="expensesTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="stock-view" class="app-view">
+                    <div class="card" id="stockInputCard">
+                        <h2 id="stockFormTitle">Add Product Item to Warehouse</h2>
+                        <form onsubmit="saveStockItemLogic(event)" id="stockActualForm" class="form-row" style="align-items:flex-end;">
+                            <input type="hidden" id="editingStockIndex" value="">
+                            <div class="form-group" style="flex:2;"><label>Item / Design Name</label><input type="text" id="pName" placeholder="Ex: SK Phoenix T-Shirt - Black - M" required></div>
+                            <div class="form-group"><label>Stock Qty</label><input type="number" id="pQty" min="0" required></div>
+                            <div class="form-group"><label>Price (Rs.)</label><input type="number" id="pPrice" min="0" required></div>
+                            <div class="form-group"><button type="submit" class="btn" style="padding:12px 20px;" id="stockFormSubmitBtn">Add Item</button></div>
+                        </form>
+                    </div>
+                    <div class="card">
+                        <h2>Warehouse Stock Inventory Levels</h2>
+                        <table>
+                            <thead><tr><th>Product Name</th><th>Stock Count</th><th>Unit Price</th><th>Warehouse Status</th><th class="action-header">Actions</th></tr></thead>
+                            <tbody id="stockTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="customer-view" class="app-view">
+                    <div class="card" id="customerInputCard">
+                        <h2 id="customerFormTitle">Create New Client Profile</h2>
+                        <form onsubmit="saveCustomerProfileLogic(event)" id="customerActualForm" class="form-row" style="align-items:flex-end;">
+                            <input type="hidden" id="editingCustomerIndex" value="">
+                            <div class="form-group" style="flex:2;"><label>Customer Name</label><input type="text" id="cName" placeholder="Ex: Shan Kaushalya" required></div>
+                            <div class="form-group" style="flex:2;"><label>Mobile Phone</label><input type="text" id="cPhone" placeholder="Ex: 077XXXXXXX" required></div>
+                            <div class="form-group" style="flex:3;"><label>Delivery Address</label><input type="text" id="cAddress" placeholder="Ex: 123, Galle Road" required></div>
+                            <div class="form-group"><button type="submit" class="btn" style="padding:12px 20px;" id="customerFormSubmitBtn">Register Profile</button></div>
+                        </form>
+                    </div>
+                    <div class="card">
+                        <h2>Client Database Book</h2>
+                        <table>
+                            <thead><tr><th>ID</th><th>Client Name</th><th>Contact No</th><th>Delivery Address</th><th class="action-header">Actions</th></tr></thead>
+                            <tbody id="customerTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="users-view" class="app-view">
+                    <div id="user-management-container">
+                        </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        window.addEventListener('storage', function(e) {
+    if (e.key === 'db_update') {
+        // දත්ත වෙනස් වුණා, සර්වර් එකෙන් ආයේ අදින්න
+        fetch(WEB_APP_URL)
+            .then(res => res.json())
+            .then(data => {
+                dataStore = data; // දත්ත අලුත් කරගන්න
+                reRenderEntireUI(); // පේජ් එක Refresh නොකර UI එක අලුත් කරනවා
+            });
+    }
+});
+let currentBusiness = "SK Crafts";
+let currentUser = "shan"; 
+let currentRole = "MD";
+let activePermissions = { sales: true, stock: true, customer: true, users: true };
+
+const hostIP = window.location.hostname === '' ? 'localhost' : window.location.hostname;
+const WEB_APP_URL = "http://" + hostIP + ":3000/api/sync";
+
+let dataStore = {
+    "SK Crafts": { orders: [], stock: [], customers: [], expenses: [], quotations: [], deliveries: [], raw_materials: [], payroll: [] },
+    "SK Fashion": { orders: [], stock: [], customers: [], expenses: [], quotations: [], deliveries: [], raw_materials: [], payroll: [] },
+    "SK Digital": { orders: [], stock: [], customers: [], expenses: [], quotations: [], deliveries: [], raw_materials: [], payroll: [] }
+};
+let systemUsers = [
+    { username: "shan", password: "1234", perms: { sales: true, stock: true, customer: true, users: true }, role: "MD" }
+];
+let combinedCart = []; let singleCart = []; let dashFilterFrom = ""; let dashFilterTo = ""; let bomCart = [];
+
+let mainBarChartInstance = null;
+let expensePieChartInstance = null;
+
+window.onload = function() {
+    let statusTextEl = document.getElementById('loginStatusText');
+    if(statusTextEl) statusTextEl.textContent = "Synchronizing core parameters...";
+    
+    fetch(WEB_APP_URL)
+        .then(res => res.json())
+        .then(cloudMaster => {
+            if(cloudMaster.users && cloudMaster.users.length > 0) { 
+                systemUsers = cloudMaster.users.map(u => {
+                    if (typeof u.perms === 'string') u.perms = JSON.parse(u.perms);
+                    return u;
+                });
+            }
+            dataStore["SK Crafts"] = { orders: [], stock: [], customers: [], expenses: [], quotations: [], deliveries: [], raw_materials: [], payroll: [] };
+            dataStore["SK Fashion"] = { orders: [], stock: [], customers: [], expenses: [], quotations: [], deliveries: [], raw_materials: [], payroll: [] };
+            dataStore["SK Digital"] = { orders: [], stock: [], customers: [], expenses: [], quotations: [], deliveries: [], raw_materials: [], payroll: [] };
+
+            if(cloudMaster.stock) { cloudMaster.stock.forEach(item => { let targetBiz = item.business; if(targetBiz === "SK Creations") targetBiz = "SK Crafts"; if(dataStore[targetBiz]) { dataStore[targetBiz].stock.push({ name: item.name, qty: item.qty, price: item.price }); } }); }
+            if(cloudMaster.customers) { cloudMaster.customers.forEach(c => { let targetBiz = c.business; if(targetBiz === "SK Creations") targetBiz = "SK Crafts"; if(dataStore[targetBiz]) { dataStore[targetBiz].customers.push({ id: c.id, name: c.name, phone: c.phone, address: c.address }); } }); }
+            if(cloudMaster.orders) { cloudMaster.orders.forEach(o => { let targetBiz = o.business; if(targetBiz === "SK Creations") targetBiz = "SK Crafts"; o.discount = parseFloat(o.discount) || 0; o.status = o.status || "Pending"; if(dataStore[targetBiz]) { dataStore[targetBiz].orders.push(o); } }); }
+            if(cloudMaster.expenses) { cloudMaster.expenses.forEach(e => { let targetBiz = e.business; if(targetBiz === "SK Creations") targetBiz = "SK Crafts"; if(dataStore[targetBiz]) { dataStore[targetBiz].expenses.push(e); } }); }
+            if(cloudMaster.quotations) { cloudMaster.quotations.forEach(q => { let targetBiz = q.business; if(targetBiz === "SK Creations") targetBiz = "SK Crafts"; if(dataStore[targetBiz]) { dataStore[targetBiz].quotations.push(q); } }); }
+            if(cloudMaster.deliveries) { cloudMaster.deliveries.forEach(d => { let targetBiz = d.business; if(targetBiz === "SK Creations") targetBiz = "SK Crafts"; if(dataStore[targetBiz]) { dataStore[targetBiz].deliveries.push(d); } }); }
+            if(cloudMaster.raw_materials) { cloudMaster.raw_materials.forEach(r => { let targetBiz = r.business; if(targetBiz === "SK Creations") targetBiz = "SK Crafts"; if(dataStore[targetBiz]) { dataStore[targetBiz].raw_materials.push(r); } }); }
+            if(cloudMaster.payroll) { cloudMaster.payroll.forEach(p => { let targetBiz = p.business; if(targetBiz === "SK Creations") targetBiz = "SK Crafts"; if(dataStore[targetBiz]) { dataStore[targetBiz].payroll.push(p); } }); }
+
+            ensureDataStoreFallbacks(); updateNextCombinedInvoiceNumber(); reRenderEntireUI();
+            if(statusTextEl) statusTextEl.textContent = "🔐 Database Synced & Encrypted. Security Node Armed.";
+        })
+        .catch(err => {
+            console.error("Local DB Connection Failure Trace:", err);
+            if(statusTextEl) statusTextEl.textContent = "⚠️ Database offline. Check if Node.js server is running.";
+            ensureDataStoreFallbacks(); updateNextCombinedInvoiceNumber(); reRenderEntireUI();
+        });
+};
+function ensureDataStoreFallbacks() {
+    if(dataStore["SK Crafts"].stock.length === 0) { dataStore["SK Crafts"].stock = [{name:"Pipe Cleaner Flower Pot", qty:25, price:1500}, {name:"Resin Bookmark Craft", qty:14, price:850}]; }
+    if(dataStore["SK Crafts"].customers.length === 0) { dataStore["SK Crafts"].customers = [{id:"C-101", name:"Walk-in Customer (Creations)", phone:"N/A", address:"Store Pickup"}]; }
+    if(dataStore["SK Fashion"].customers.length === 0) { dataStore["SK Fashion"].customers = [{id:"C-101", name:"Walk-in Customer (Fashion)", phone:"N/A", address:"Store Pickup"}]; }
+    if(dataStore["SK Digital"].customers.length === 0) { dataStore["SK Digital"].customers = [{id:"C-101", name:"Walk-in Customer (Digital)", phone:"N/A", address:"Store Pickup"}]; }
+    if(dataStore["SK Fashion"].stock.length === 0) { dataStore["SK Fashion"].stock = [{name:"Custom Printed T-Shirt", qty:50, price:2500}, {name:"Printed Cap Brand", qty:30, price:1200}]; }
+    if(dataStore["SK Digital"].stock.length === 0) { dataStore["SK Digital"].stock = [{name:"Photo Tile Printing", qty:5, price:3000}]; }
+    updateCombCustomerDropdowns();
+}
+
+function updateNextCombinedInvoiceNumber() {
+    let combNoEl = document.getElementById('combNo'); if (!combNoEl) return;
+    let maxNum = 1000; 
+    ["SK Crafts", "SK Fashion", "SK Digital"].forEach(b => {
+        if (dataStore[b] && dataStore[b].orders) {
+            dataStore[b].orders.forEach(o => { if (o.id && o.id.toUpperCase().startsWith("COMB-")) { let num = parseInt(o.id.split('-')[1]); if (!isNaN(num) && num > maxNum) { maxNum = num; } } });
+        }
+    });
+    combNoEl.value = "COMB-" + (maxNum + 1);
+}
+
+function attemptSystemAuthentication() {
+    let u = document.getElementById('loginUser').value.trim().toLowerCase();
+    let p = document.getElementById('loginPass').value;
+    let match = systemUsers.find(user => user.username.toLowerCase() === u && user.password === p);
+    if(match) {
+        currentUser = match.username; 
+        activePermissions = match.perms; 
+        currentRole = match.role || "STAFF";
+        unlockSystemWorkspace();
+    } else { alert("❌ Authentication Failed: Invalid Username or Password!"); }
+}
+
+function unlockSystemWorkspace() {
+    let overlay = document.getElementById('loginOverlay'); let mainSys = document.getElementById('mainSystem');
+    if(overlay) overlay.style.display = "none"; if(mainSys) mainSys.style.display = "block";
+    let badge = document.getElementById('sessionBadge'); 
+    if(badge) badge.textContent = "User: " + currentUser.toUpperCase() + " (" + currentRole + ")";
+    
+    let views = ['sales-view', 'combined-view', 'workflow-view', 'quotation-view', 'delivery-view', 'bom-view', 'stock-view', 'customer-view', 'expenses-view', 'payroll-view', 'pnl-view', 'users-view'];
+    views.forEach(v => {
+        let btn = document.getElementById('btn_' + v);
+        if(btn) { 
+            let permKey = v.split('-')[0]; 
+            if(permKey === 'combined') permKey = 'sales'; 
+            
+            let hasAccess = false;
+            if (activePermissions[permKey] !== undefined) {
+                hasAccess = activePermissions[permKey];
+            } else {
+                if(permKey === 'quotation' || permKey === 'delivery' || permKey === 'workflow') hasAccess = activePermissions.sales || false;
+                else if(permKey === 'bom') hasAccess = activePermissions.stock || false;
+                else if(permKey === 'expenses' || permKey === 'pnl' || permKey === 'payroll') hasAccess = activePermissions.sales || false;
+                else hasAccess = activePermissions[permKey] || false;
+            }
+            btn.style.display = hasAccess ? "block" : "none"; 
+        }
+    });
+
+    let invDateEl = document.getElementById('invDate'); let combDateEl = document.getElementById('combDate'); let eDateEl = document.getElementById('eDate'); let prDateEl = document.getElementById('prDate');
+    let todayStr = new Date().toISOString().split('T')[0];
+    if(invDateEl) invDateEl.value = todayStr; if(combDateEl) combDateEl.value = todayStr; if(eDateEl) eDateEl.value = todayStr; if(prDateEl) prDateEl.value = todayStr;
+    
+    reRenderEntireUI(); updateCombCustomerDropdowns(); updateCombItemDropdown(); updateNextCombinedInvoiceNumber(); 
+    switchView('dashboard', document.getElementById('btn_dashboard'));
+}
+
+function logoutSystem() {
+    let overlay = document.getElementById('loginOverlay'); let mainSys = document.getElementById('mainSystem');
+    if(overlay) overlay.style.display = "flex"; if(mainSys) mainSys.style.display = "none";
+    let statusTextEl = document.getElementById('loginStatusText'); if(statusTextEl) statusTextEl.textContent = "Session terminated. Enter credentials to rejoin matrix.";
+    document.getElementById('loginUser').value = ""; document.getElementById('loginPass').value = "";
+}
+
+function dispatchToCloud(payload) {
+    fetch(WEB_APP_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+    .then(res => res.json()).then(data => console.log("Local DB Sync:", data)).catch(err => console.error("Local DB sync error:", err));
+}
+
+function switchBiz(bizName) {
+    currentBusiness = bizName;
+    document.querySelectorAll('.hub-btn').forEach(b => b.classList.remove('active'));
+    if(window.event && window.event.target && window.event.target.classList.contains('hub-btn')) window.event.target.classList.add('active');
+    let activeNav = document.querySelector('.nav-btn.active'); if(activeNav) activeNav.style.borderLeftColor = "var(--gold-primary)";
+    singleCart = []; clearBomCalculator(); renderSingleCart(); cancelStockEditState(); cancelCustomerEditState(); cancelUserEditState(); reRenderEntireUI();
+}
+
+function switchView(viewId, element) {
+    if (viewId === 'users-view' && !activePermissions.users) {
+        alert("⛔ Access Denied: Admin privileges required.");
+        return; 
+    }
+
+    document.querySelectorAll('.app-view').forEach(v => v.classList.remove('active'));
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    
+    let targetView = document.getElementById(viewId); if(targetView) targetView.classList.add('active');
+    if(element) { element.classList.add('active'); element.style.borderLeftColor = "var(--gold-primary)"; } 
+    else { let fallbackBtn = document.getElementById('btn_' + viewId.split('-')[0] + '-view'); if(fallbackBtn) { fallbackBtn.classList.add('active'); fallbackBtn.style.borderLeftColor = "var(--gold-primary)"; } }
+
+    let switcher = document.getElementById('topBizSwitcher');
+    if(viewId === "combined-view") { if(switcher) switcher.style.display = "none"; updateCombCustomerDropdowns(); updateCombItemDropdown(); } 
+    else { if(switcher) switcher.style.display = "flex"; }
+    
+    let titleEl = document.getElementById('pageTitle');
+    if(titleEl) { let activeNavNode = document.querySelector('.nav-btn.active'); titleEl.textContent = viewId === "combined-view" ? "SK Creations Universal Invoice" : (activeNavNode ? activeNavNode.textContent.replace(/[^\w\s]/gi, '').trim() : "Dashboard"); }
+
+    if (viewId === 'users-view') {
+        renderUserManagementContent();
+    }
+}
+
+function renderUserManagementContent() {
+    let container = document.getElementById('user-management-container');
+    if(!container) return;
+    container.innerHTML = `
+        <div class="card">
+            <h2 id="userFormTitle">Create / Register Staff Accounts</h2>
+            <form onsubmit="saveStaffUserLogic(event)" id="userActualForm">
+                <input type="hidden" id="editingUserIndex" value="">
+                <div class="form-row">
+                    <div class="form-group"><label>Staff Username</label><input type="text" id="uStaffName" placeholder="Ex: kamal" required></div>
+                    <div class="form-group"><label>Staff Access Password</label><input type="text" id="uStaffPass" placeholder="Ex: pass556" required></div>
+                </div>
+                
+                <div class="form-group" style="margin-top: 15px;">
+                    <label>Staff Role / Designation</label>
+                    <select id="uRole" required>
+                        <option value="MD">MD (Managing Director)</option>
+                        <option value="Director">Director</option>
+                        <option value="Admin">Admin</option>
+                        <option value="Manager">Manager</option>
+                        <option value="Sales">Sales / Cashier</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Custom Role Permissions Mapping</label>
+                    <div class="check-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; background: rgba(212,175,55,0.05); padding: 15px; border-radius: 10px; border: 1px dashed rgba(212,175,55,0.3);">
+                        <label class="check-item"><input type="checkbox" id="pSales" checked> 🧾 Create Invoices & Sales</label>
+                        <label class="check-item"><input type="checkbox" id="pWorkflow" checked> 🏭 Production Workflow</label>
+                        <label class="check-item"><input type="checkbox" id="pQuotations" checked> 📝 Quotations Hub</label>
+                        <label class="check-item"><input type="checkbox" id="pDelivery" checked> 🚚 Logistics & Courier</label>
+                        <label class="check-item"><input type="checkbox" id="pBom" checked> 🛠️ Raw Materials & BOM</label>
+                        <label class="check-item"><input type="checkbox" id="pStock" checked> 📦 Stock Manager</label>
+                        <label class="check-item"><input type="checkbox" id="pCust" checked> 👥 Customer Database</label>
+                        <label class="check-item"><input type="checkbox" id="pExpenses" checked> 💰 Finance & Expenses</label>
+                        <label class="check-item"><input type="checkbox" id="pPayroll" checked> 💼 HR & Payroll</label>
+                        <label class="check-item"><input type="checkbox" id="pPnl"> 📈 P&L Analytics</label>
+                        <label class="check-item"><input type="checkbox" id="pUser"> 👤 Admin Settings (Users)</label>
+                    </div>
+                </div>
+                <button type="submit" class="btn" id="userFormSubmitBtn">Register Staff User</button>
+            </form>
+        </div>
+        <div class="card">
+            <h2>Active System Staff Node Registries</h2>
+            <table>
+                <thead><tr><th>Username</th><th>Password/Key</th><th>Role</th><th>Permissions Level</th><th>Actions</th></tr></thead>
+                <tbody id="userTableBody"></tbody>
+            </table>
+        </div>
+    `;
+    renderUserManagementTable();
+}
+
+function setSearchPrefix(prefix, element) {
+    element.parentElement.querySelectorAll('button').forEach(b => { b.style.background = 'rgba(212, 175, 55, 0.1)'; b.style.color = 'var(--gold-primary)'; });
+    element.style.background = 'var(--gold-primary)'; element.style.color = '#111';
+    let input = document.getElementById('searchInvoiceInput'); if(input) { input.value = prefix; input.focus(); }
+}
+
+function applyDateFilter() { dashFilterFrom = document.getElementById('filterFrom').value; dashFilterTo = document.getElementById('filterTo').value; if(!dashFilterFrom || !dashFilterTo) { alert("Please select both 'From' and 'To' dates."); return; } reRenderEntireUI(); }
+function clearDateFilter() { dashFilterFrom = ""; dashFilterTo = ""; document.getElementById('filterFrom').value = ""; document.getElementById('filterTo').value = ""; reRenderEntireUI(); }
+function clearPnLFilter() { document.getElementById('pnlMonth').value = ""; reRenderEntireUI(); }
+
+function getCombinedOrder(orderId) {
+    let combinedOrder = null; let items = []; let grandTotal = 0;
+    ["SK Crafts", "SK Fashion", "SK Digital"].forEach(b => {
+        dataStore[b].orders.forEach(o => {
+            if(o.id.toUpperCase() === orderId.toUpperCase()) {
+                if(!combinedOrder) { combinedOrder = { id: o.id, date: o.date, cust: o.cust, address: o.address, discount: parseFloat(o.discount||0), paidAmount: parseFloat(o.paidAmount || 0), balanceAmount: parseFloat(o.balanceAmount || 0), method: o.method, status: o.status, business: "SK Creations" }; }
+                items.push({ business: b, name: o.item, price: parseFloat(o.total) / (parseInt(o.qty) || 1), qty: o.qty, total: parseFloat(o.total) }); grandTotal += parseFloat(o.total);
+            }
+        });
+    });
+    if(combinedOrder) { combinedOrder.items = items; combinedOrder.total = grandTotal; let calcBalance = grandTotal - combinedOrder.discount - combinedOrder.paidAmount; combinedOrder.balanceAmount = calcBalance < 0 ? 0 : calcBalance; }
+    return combinedOrder;
+}
+
+function generatePremiumInvoiceHTML(order, businessName) {
+    let isCombined = order.id.startsWith("COMB") || order.id.includes("Q-COMB"); 
+    let displayBizName = isCombined ? "SK CREATIONS" : businessName.toUpperCase();
+    let addressLine = "No: 63/1, Egodauyana Moratuwa";
+    let contactLine = "0749853510"; 
+    let webLine = "www.skcreations.lk";
+
+    let baseTotal = parseFloat(order.total); let orderDiscount = parseFloat(order.discount || 0); let parsedPaid = parseFloat(order.paidAmount !== undefined ? order.paidAmount : baseTotal); let parsedBalance = parseFloat(order.balanceAmount || 0);
+    let statusText = parsedBalance > 0 ? "PARTIAL / ADVANCE" : "PAID"; let statusColor = parsedBalance > 0 ? "#ff9f43" : "#1dd1a1"; 
+    if(order.isQuotation) { statusText = "DRAFT"; statusColor = "#f39c12"; }
+
+    let tableRowsHTML = "";
+    if (order.items && order.items.length > 0) { 
+        order.items.forEach(item => { let sub = (item.price * item.qty).toLocaleString('en-US', { minimumFractionDigits: 2 }); let itemNameDisplay = isCombined ? '[' + item.business.split(' ')[1] + '] ' + item.name : item.name; tableRowsHTML += '<tr style="border-bottom: 1px solid rgba(212, 175, 55, 0.2);"><td style="padding: 12px 16px; font-size: 14px; color: #fef0c3; font-weight: 600;">' + itemNameDisplay + '</td><td style="padding: 12px 16px; font-size: 14px; color: #fef0c3; text-align: right;">Rs. ' + parseFloat(item.price).toLocaleString('en-US', { minimumFractionDigits: 2 }) + '</td><td style="padding: 12px 16px; font-size: 14px; color: #fef0c3; text-align: center; font-weight: 700;">' + item.qty + '</td><td style="padding: 12px 16px; font-size: 14px; color: #d4af37; text-align: right; font-weight: 700;">Rs. ' + sub + '</td></tr>'; });
+    } else {
+        let formattedPrice = (baseTotal / parseInt(order.qty || 1)).toLocaleString('en-US', { minimumFractionDigits: 2 }); tableRowsHTML = '<tr style="border-bottom: 1px solid rgba(212, 175, 55, 0.2);"><td style="padding: 16px; font-size: 15px; color: #fef0c3; font-weight: 600;">' + order.item + '</td><td style="padding: 16px; font-size: 15px; color: #fef0c3; text-align: right;">Rs. ' + formattedPrice + '</td><td style="padding: 16px; font-size: 15px; color: #fef0c3; text-align: center; font-weight: 700;">' + order.qty + '</td><td style="padding: 16px; font-size: 15px; color: #d4af37; text-align: right; font-weight: 700;">Rs. ' + baseTotal.toLocaleString('en-US', { minimumFractionDigits: 2 }) + '</td></tr>';
+    }
+
+    let discountHtmlRow = ""; if(orderDiscount > 0) { discountHtmlRow = `<div style="display: flex; justify-content: space-between; font-size: 14px; color: #e74c3c; padding-bottom: 8px; border-bottom: 1px dashed rgba(212, 175, 55, 0.2); font-weight: 600;"><span>Discount / Offers:</span><span style="font-weight: 700;">- Rs. ${orderDiscount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span></div>`; }
+
+    let whatsappActionBtn = isCombined ? `<button onclick="sendCombinedWhatsAppInvoice('${order.id}')" class="btn" style="width: auto; padding: 12px 30px; font-size: 14px; background: #25D366; color: #111; border-radius: 8px; font-weight: 800; border: none; cursor: pointer; box-shadow: 0 4px 15px rgba(37,211,102,0.3);">💬 Send WhatsApp Bill</button>` : `<button onclick="sendWhatsAppInvoice('${order.id}', '${businessName}')" class="btn" style="width: auto; padding: 12px 30px; font-size: 14px; background: #25D366; color: #111; border-radius: 8px; font-weight: 800; border: none; cursor: pointer; box-shadow: 0 4px 15px rgba(37,211,102,0.3);">💬 Send WhatsApp</button>`;
+    if(order.isQuotation) whatsappActionBtn = ''; 
+
+    let thPrice = order.isQuotation ? "UNIT RATE" : "UNIT PRICE";
+    let thQty = order.isQuotation ? "ORDER QTY" : "QTY";
+
+    // CSS Variables අයින් කරලා කෙලින්ම Hex Colors දුන්නා
+    let invoiceHtml = `<div id="printAreaContainer_${order.id}" class="printable-invoice" style="background-color: #0a0a0a; color: #fef0c3; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
+        <div>
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #d4af37; padding-bottom: 25px; margin-bottom: 35px;">
+                <div>
+                    <h1 style="font-size: 34px; font-weight: 800; color: #d4af37; margin: 0; letter-spacing: 1px;">${displayBizName}</h1>
+                    <p style="font-size: 13px; color: #d4af37; margin-top: 6px; font-weight: 600;">${addressLine}<br>Contact: ${contactLine} | Web: ${webLine}</p>
+                </div>
+                <div style="text-align: right;">
+                    <h2 style="font-size: 26px; font-weight: 800; color: #fef0c3; margin: 0; letter-spacing: 2px;">INVOICE</h2>
+                    <p style="font-size: 15px; font-weight: 700; color: #d4af37; margin-top: 6px;">No: <span style="color: #fef0c3;">${order.id}</span></p>
+                </div>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 30px; gap: 30px;">
+                <div style="flex: 1; background: rgba(15, 20, 30, 0.6); padding: 18px; border-radius: 10px; border: 1px solid rgba(212, 175, 55, 0.3);">
+                    <h4 style="font-size: 11px; text-transform: uppercase; color: #d4af37; margin-bottom: 8px; letter-spacing: 1px; font-weight: 700;">Invoice To:</h4>
+                    <p style="font-size: 17px; font-weight: 800; color: #fef0c3; margin-bottom: 4px;">${order.cust}</p>
+                    <p style="font-size: 13px; color: #fef0c3; line-height: 1.5; font-weight: 500;"><strong style="color:#d4af37;">Ship To:</strong> ${order.address}</p>
+                </div>
+                <div style="width: 260px; background: rgba(15, 20, 30, 0.6); padding: 18px; border-radius: 10px; border: 1px solid rgba(212, 175, 55, 0.3); display: flex; flex-direction: column; gap: 8px; justify-content: center;">
+                    <p style="font-size: 13px; color: #d4af37; margin: 0; font-weight: 600;">Date: <span style="float: right; color: #fef0c3; font-weight: 700;">${order.date}</span></p>
+                    <p style="font-size: 13px; color: #d4af37; margin: 0; font-weight: 600;">Payment: <span style="float: right; padding: 2px 6px; background: rgba(212,175,55,0.15); border: 1px solid rgba(212,175,55,0.3); border-radius: 6px; font-size: 11px; font-weight: 800; color: #fef0c3;">${order.method}</span></p>
+                    <p style="font-size: 13px; color: #d4af37; margin: 0; font-weight: 600;">Status: <span style="float: right; color: ${statusColor}; font-weight: 800;">${statusText}</span></p>
+                </div>
+            </div>
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
+                <thead>
+                    <tr style="background: rgba(212, 175, 55, 0.15); border-bottom: 2px solid #d4af37;">
+                        <th style="padding: 12px; font-size: 13px; font-weight: 800; color: #d4af37; text-transform: uppercase; text-align: left; border: none;">Item Description</th>
+                        <th style="padding: 12px; font-size: 13px; font-weight: 800; color: #d4af37; text-transform: uppercase; text-align: right; width: 140px; border: none;">${thPrice}</th>
+                        <th style="padding: 12px; font-size: 13px; font-weight: 800; color: #d4af37; text-transform: uppercase; text-align: center; width: 90px; border: none;">${thQty}</th>
+                        <th style="padding: 12px; font-size: 13px; font-weight: 800; color: #d4af37; text-transform: uppercase; text-align: right; width: 160px; border: none;">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>${tableRowsHTML}</tbody>
+            </table>
+            <div style="display: flex; justify-content: flex-end; margin-bottom: 30px;">
+                <div style="width: 300px; display: flex; flex-direction: column; gap: 8px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 14px; color: #d4af37; padding-bottom: 8px; border-bottom: 1px solid rgba(212, 175, 55, 0.2); font-weight: 600;"><span>Sub Total:</span><span style="font-weight: 700; color: #fef0c3;">Rs. ${baseTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span></div>
+                    ${discountHtmlRow}
+                    <div style="display: flex; justify-content: space-between; font-size: 14px; color: #d4af37; padding-top: 8px; padding-bottom: 8px; border-bottom: 1px solid rgba(212, 175, 55, 0.2); font-weight: 600;"><span>Paid Amount:</span><span style="font-weight: 700; color: #1dd1a1;">Rs. ${parsedPaid.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span></div>
+                    <div style="display: flex; justify-content: space-between; font-size: 18px; color: #fef0c3; font-weight: 800; padding-top: 4px;"><span>Balance Due:</span><span style="color: #d4af37;">Rs. ${parsedBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span></div>
+                </div>
+            </div>
+        </div>
+        <div>
+            <div style="border-top: 1px solid rgba(212, 175, 55, 0.3); padding-top: 15px; text-align: center;">
+                <p style="font-size: 13px; font-weight: 700; color: #d4af37; margin: 0;">Thank you for your business!</p>
+                <p style="font-size: 11px; color: rgba(212, 175, 55, 0.6); margin-top: 4px; font-weight: 500;">This is a system generated official commercial invoice receipt.</p>
+            </div>
+            <div class="print-btn-class" style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px;">
+                ${whatsappActionBtn}
+                <button onclick="triggerPremiumPrint('${order.id}')" class="btn" style="width: auto; padding: 12px 30px; font-size: 14px; background: #d4af37; color: #111; border-radius: 8px; font-weight: 800; border: none; cursor: pointer;">🖨️ PDF / Print Document</button>
+                <button onclick="downloadInvoicePDF('${order.id}')" class="btn" style="width: auto; padding: 12px 30px; font-size: 14px; background:#f1c40f; color:#111; border-radius: 8px; font-weight: 800; border: none; cursor: pointer;">📥 Download PDF</button>
+            </div>
+        </div>
+    </div>`;
+
+    if(order.isQuotation) {
+        invoiceHtml = invoiceHtml.replace(/>INVOICE<\/h2>/g, '>QUOTATION</h2>');
+        invoiceHtml = invoiceHtml.replace(/Invoice To:/g, 'Quotation For:');
+        invoiceHtml = invoiceHtml.replace(/Paid Amount:/g, 'Validity:');
+        invoiceHtml = invoiceHtml.replace(/Balance Due:/g, 'Final Estimated Amount:');
+        invoiceHtml = invoiceHtml.replace(/This is a system generated official commercial invoice receipt./g, 'This is a system generated commercial quotation draft.');
+    }
+    return invoiceHtml;
+}
+
+function downloadInvoicePDF(invoiceId) {
+    // අදාළ ඉන්වොයිස් අංකයට අයිති Unique DIV එක විතරක් තෝරගන්නවා
+    const element = document.getElementById(`printAreaContainer_${invoiceId}`);
+    
+    if (!element) {
+        alert("Error: Invoice matrix container not found inside DOM buffer.");
+        return;
+    }
+
+    // PDF එක හදද්දී බට්න් ටික තාවකාලිකව හයිඩ් කරනවා
+    const printBtns = element.querySelector('.print-btn-class');
+    if (printBtns) printBtns.style.display = 'none';
+
+    var opt = {
+        margin: 5,
+        filename: `${invoiceId}_Invoice.pdf`,
+        image: { type: 'jpeg', quality: 1 },
+        html2canvas: { 
+            scale: 2, 
+            useCORS: true, 
+            letterRendering: true,
+            backgroundColor: '#0a0a0a' 
+        },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    // සාර්ථකව PDF එකක් ජෙනරේට් කරනවා
+    html2pdf().set(opt).from(element).save().then(() => {
+        // වැඩේ ඉවර වුණාම බට්න් ටික ආයෙත් පේන්න සෙට් කරනවා
+        if (printBtns) printBtns.style.display = 'flex';
+    });
+}
+
+function triggerPremiumPrint(invoiceId) {
+    // මෙතනත් අපි Unique ID එකෙන්ම DIV එක අල්ලනවා
+    let containerEl = document.getElementById(`printAreaContainer_${invoiceId}`); 
+    if(!containerEl) { alert("Error: Invoice matrix buffer empty."); return; }
+    
+    let invoiceContent = containerEl.outerHTML; 
+    let printWindow = window.open('', '_blank', 'height=900,width=900');
+    printWindow.document.write('<html><head><title>' + invoiceId + '</title>'); 
+    printWindow.document.write('<style>'); 
+    printWindow.document.write('@page { size: A4; margin: 10mm; }'); 
+    printWindow.document.write(':root { --gold-primary: #d4af37; --gold-light: #fef0c3; }'); 
+    printWindow.document.write('body { font-family: "Segoe UI", sans-serif; margin: 0; padding: 0; background-color: #0a0a0a !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }'); 
+    printWindow.document.write('.printable-invoice { background-color: #0a0a0a !important; color: var(--gold-light) !important; width: 100%; height: 270mm; margin: 0 auto; box-shadow: none; border: 1px solid rgba(212, 175, 55, 0.4) !important; padding: 30px !important; display: flex !important; flex-direction: column !important; justify-content: space-between !important; box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; page-break-inside: avoid; overflow: hidden; }'); 
+    printWindow.document.write('.print-btn-class { display: none !important; }'); 
+    printWindow.document.write('table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }'); 
+    printWindow.document.write('th { background: rgba(212, 175, 55, 0.15) !important; padding: 10px 12px; font-size: 13px; font-weight: 800; border-bottom: 2px solid var(--gold-primary); color: var(--gold-primary); text-align: left; }'); 
+    printWindow.document.write('td { padding: 10px 12px; font-size: 14px; border-bottom: 1px solid rgba(212, 175, 55, 0.2); color: var(--gold-light); }'); 
+    printWindow.document.write('</style></head><body>'); 
+    printWindow.document.write(invoiceContent); 
+    printWindow.document.write('</body></html>');
+    printWindow.document.close(); 
+    printWindow.focus(); 
+    setTimeout(function() { printWindow.print(); printWindow.close(); }, 800); 
+}
+
+function exportDataToExcel() {
+    let biz = dataStore[currentBusiness]; if(biz.orders.length === 0) { alert("No order records found to export."); return; }
+    let csvContent = "data:text/csv;charset=utf-8,Invoice No,Date,Customer,Total Amount (Rs.),Discount (Rs.),Paid (Rs.),Balance (Rs.),Method,Status\n";
+    let activeOrders = biz.orders;
+    if (dashFilterFrom && dashFilterTo) { let fromDate = new Date(dashFilterFrom); let toDate = new Date(dashFilterTo); toDate.setHours(23, 59, 59, 999); activeOrders = activeOrders.filter(o => { let d = new Date(o.date); return d >= fromDate && d <= toDate; }); }
+    activeOrders.forEach(o => { let row = `${o.id},${o.date},"${o.cust}",${o.total},${o.discount||0},${o.paidAmount},${o.balanceAmount},${o.method},${o.status||"Pending"}`; csvContent += row + "\n"; });
+    let encodedUri = encodeURI(csvContent); let link = document.createElement("a"); link.setAttribute("href", encodedUri); let fileName = dashFilterFrom ? `${currentBusiness.replace(" ", "_")}_Sales_${dashFilterFrom}_to_${dashFilterTo}.csv` : `${currentBusiness.replace(" ", "_")}_Sales_All.csv`; link.setAttribute("download", fileName); document.body.appendChild(link); link.click(); document.body.removeChild(link);
+}
+
+function exportExpensesToExcel() {
+    let biz = dataStore[currentBusiness]; if(biz.expenses.length === 0) { alert("No expense records found to export."); return; }
+    let csvContent = "data:text/csv;charset=utf-8,Date,Expense Description,Amount (Rs.)\n"; let activeExpenses = biz.expenses;
+    if (dashFilterFrom && dashFilterTo) { let fromDate = new Date(dashFilterFrom); let toDate = new Date(dashFilterTo); toDate.setHours(23, 59, 59, 999); activeExpenses = activeExpenses.filter(e => { let d = new Date(e.date); return d >= fromDate && d <= toDate; }); }
+    let totalExp = 0; activeExpenses.forEach(e => { let row = `${e.date},"${e.desc}",${e.amount}`; csvContent += row + "\n"; totalExp += parseFloat(e.amount); }); csvContent += `\n"","TOTAL EXPENSES",${totalExp}\n`;
+    let encodedUri = encodeURI(csvContent); let link = document.createElement("a"); link.setAttribute("href", encodedUri); let fileName = dashFilterFrom ? `${currentBusiness.replace(" ", "_")}_Expenses_${dashFilterFrom}_to_${dashFilterTo}.csv` : `${currentBusiness.replace(" ", "_")}_Expenses_All.csv`; link.setAttribute("download", fileName); document.body.appendChild(link); link.click(); document.body.removeChild(link);
+}
+
+function sendWhatsAppInvoice(orderId, businessName) {
+    let orderRows = dataStore[businessName].orders.filter(o => o.id === orderId); if(!orderRows || orderRows.length === 0) return;
+    let baseOrder = orderRows[0]; let customer = dataStore[businessName].customers.find(c => c.name === baseOrder.cust); let phone = customer ? customer.phone : ""; let formattedPhone = phone.replace(/[^0-9]/g, ''); if (formattedPhone.startsWith('0')) formattedPhone = '94' + formattedPhone.substring(1);
+    if(!formattedPhone || phone === "N/A") { let userPhone = prompt("Customer phone number ekak natha. Karunakarala WhatsApp number eka thahawuru karanna:", "07"); if(!userPhone) return; formattedPhone = userPhone.replace(/[^0-9]/g, ''); if (formattedPhone.startsWith('0')) formattedPhone = '94' + formattedPhone.substring(1); }
+    let itemsString = ""; let grandTotal = 0; orderRows.forEach(i => { itemsString += "• " + i.item + " (" + i.qty + " Pcs) -> Rs. " + parseFloat(i.total).toLocaleString() + "\n"; grandTotal += parseFloat(i.total); });
+    let dis = parseFloat(baseOrder.discount || 0); let finalNet = grandTotal - dis; let bal = parseFloat(baseOrder.balanceAmount || 0); let paidLabel = bal > 0 ? "*Paid Advance:*" : "*Paid Amount:*"; 
+    let disString = dis > 0 ? `*Sub Total:* Rs. ${grandTotal.toLocaleString()}\n*Discount / Offers:* - Rs. ${dis.toLocaleString()}\n*Net Bill:* Rs. ${finalNet.toLocaleString()}\n` : `*Total Bill:* Rs. ${grandTotal.toLocaleString()}\n`;
+    let message = "*" + businessName.toUpperCase() + " - INVOICE*\n-----------------------------------\n*Invoice No:* " + baseOrder.id + "\n*Date:* " + baseOrder.date + "\n*Customer:* " + baseOrder.cust + "\n-----------------------------------\n*Purchased Items:*\n" + itemsString + "-----------------------------------\n" + disString + paidLabel + " Rs. " + parseFloat(baseOrder.paidAmount || 0).toLocaleString() + "\n*Balance Due:* Rs. " + bal.toLocaleString() + "\n-----------------------------------\nThank you for your business! ❤️";
+    window.open("https://api.whatsapp.com/send?phone=" + formattedPhone + "&text=" + encodeURIComponent(message), '_blank');
+}
+
+function sendCombinedWhatsAppInvoice(orderId) {
+    let targetOrder = getCombinedOrder(orderId); if(!targetOrder) { alert("WhatsApp Dispatch: Error. Order not found."); return; } let phone = "N/A";
+    ["SK Crafts", "SK Fashion", "SK Digital"].forEach(b => { let cMatch = dataStore[b].customers.find(c => c.name === targetOrder.cust); if(cMatch && cMatch.phone && cMatch.phone !== "N/A") phone = cMatch.phone; });
+    let formattedPhone = phone.replace(/[^0-9]/g, ''); if (formattedPhone.startsWith('0')) formattedPhone = '94' + formattedPhone.substring(1);
+    if(!formattedPhone || phone === "N/A") { let userPhone = prompt("Customer phone number ekak natha. Karunakarala WhatsApp number eka ඇතුළත් කරන්න (Ex: 077XXXXXXX):", "07"); if(!userPhone) return; formattedPhone = userPhone.replace(/[^0-9]/g, ''); if (formattedPhone.startsWith('0')) formattedPhone = '94' + formattedPhone.substring(1); }
+    let itemsString = ""; targetOrder.items.forEach(item => { itemsString += "• [" + item.business.split(' ')[1] + "] " + item.name + " (" + item.qty + " Pcs) -> Rs. " + item.total.toLocaleString() + "\n"; });
+    let disComb = parseFloat(targetOrder.discount || 0); let finalNetComb = targetOrder.total - disComb; let balComb = parseFloat(targetOrder.balanceAmount || 0); let paidLabelComb = balComb > 0 ? "*Paid Advance:*" : "*Paid Amount:*"; 
+    let disStringComb = disComb > 0 ? `*Sub Total:* Rs. ${targetOrder.total.toLocaleString()}\n*Discount / Offers:* - Rs. ${disComb.toLocaleString()}\n*Net Bill:* Rs. ${finalNetComb.toLocaleString()}\n` : `*Grand Total:* Rs. ${targetOrder.total.toLocaleString()}\n`;
+    let message = "*SK CREATIONS - OFFICIAL INVOICE*\n-----------------------------------\n*SK Creation Invoice No:* " + targetOrder.id + "\n*Date:* " + targetOrder.date + "\n*Customer:* " + targetOrder.cust + "\n-----------------------------------\n*Purchased Items List:*\n" + itemsString + "-----------------------------------\n" + disStringComb + paidLabelComb + " Rs. " + targetOrder.paidAmount.toLocaleString() + "\n*Balance Due:* Rs. " + balComb.toLocaleString() + "\n-----------------------------------\nThank you for shopping across our corporate business nodes! ❤️";
+    window.open("https://api.whatsapp.com/send?phone=" + formattedPhone + "&text=" + encodeURIComponent(message), '_blank');
+}
+
+function searchInvoiceLogic() {
+    let searchKey = document.getElementById('searchInvoiceInput').value.trim().toUpperCase(); let resultBox = document.getElementById('searchResultBox'); if(!resultBox) return;
+    if(!searchKey) { alert("Please input an Invoice Number to query."); return; }
+    if(searchKey.startsWith("COMB")) { let compOrder = getCombinedOrder(searchKey); if(compOrder) { resultBox.style.display = "block"; resultBox.innerHTML = generatePremiumInvoiceHTML(compOrder, "SK Creations"); return; } }
+    let matchedOrderRows = null; let matchedBiz = null; let businessPools = ["SK Crafts", "SK Fashion", "SK Digital"];
+    for(let b of businessPools) { let matchingRows = dataStore[b].orders.filter(o => o.id.toUpperCase() === searchKey); if(matchingRows.length > 0) { matchedOrderRows = matchingRows; matchedBiz = b; break; } }
+    if(matchedOrderRows) { let baseRow = matchedOrderRows[0]; let reconstructedOrder = { id: baseRow.id, date: baseRow.date, cust: baseRow.cust, address: baseRow.address, discount: parseFloat(baseRow.discount||0), paidAmount: baseRow.paidAmount, balanceAmount: baseRow.balanceAmount, method: baseRow.method, items: matchedOrderRows.map(r => ({ business: matchedBiz, name: r.item, price: parseFloat(r.total)/parseInt(r.qty || 1), qty: r.qty, total: parseFloat(r.total) })), total: matchedOrderRows.reduce((sum, r) => sum + parseFloat(r.total), 0) }; resultBox.style.display = "block"; resultBox.innerHTML = generatePremiumInvoiceHTML(reconstructedOrder, matchedBiz); } else { resultBox.style.display = "block"; resultBox.innerHTML = '<div class="card" style="margin-bottom:0; background: rgba(231, 76, 60, 0.1); border-color: #e74c3c;"><p style="text-align:center; color:#ff4757; font-weight:700;">❌ Order Reference [' + searchKey + '] not found inside active matrices!</p></div>'; }
+}
+
+function updateCombCustomerDropdowns() {
+    let combSel = document.getElementById('combCustomer'); if(!combSel) return; combSel.innerHTML = "<option value=''>-- Choose Customer --</option>"; let allUniqueCusts = [];
+    ["SK Crafts", "SK Fashion", "SK Digital"].forEach(b => { if(dataStore[b] && dataStore[b].customers) { dataStore[b].customers.forEach(c => { if(!allUniqueCusts.find(curr => curr.name === c.name)) { allUniqueCusts.push(c); } }); } });
+    allUniqueCusts.forEach(c => combSel.innerHTML += '<option value="' + c.name + '">' + c.name + '</option>');
+}
+
+function autoFillCombCustomerAddress() {
+    let custName = document.getElementById('combCustomer').value; let foundAddress = "N/A";
+    ["SK Crafts", "SK Fashion", "SK Digital"].forEach(b => { let match = dataStore[b].customers.find(c => c.name === custName); if(match && match.address) foundAddress = match.address; });
+    let addrEl = document.getElementById('combAddress'); if(addrEl) addrEl.value = foundAddress;
+}
+function updateCombItemDropdown() {
+    let targetNode = document.getElementById('combNodeSelect').value; let itemSel = document.getElementById('combItemSelect'); if(!itemSel) return; itemSel.innerHTML = "<option value=''>-- Choose Product --</option>";
+    if(dataStore[targetNode] && dataStore[targetNode].stock) { dataStore[targetNode].stock.forEach(i => { itemSel.innerHTML += '<option value="' + i.name + '">' + i.name + ' (' + i.qty + ' Left) - Rs. ' + i.price + '</option>'; }); }
+    autoFillCombPrice(); 
+}
+
+function autoFillCombPrice() {
+    let node = document.getElementById('combNodeSelect').value;
+    let itemEl = document.getElementById('combItemSelect');
+    let priceEl = document.getElementById('combPriceInput');
+    if(!itemEl || !priceEl) return;
+    let match = dataStore[node].stock.find(i => i.name === itemEl.value);
+    if(match) priceEl.value = match.price;
+    else priceEl.value = "";
+}
+
+function addItemToCartGrid() {
+    let node = document.getElementById('combNodeSelect').value; 
+    let itemName = document.getElementById('combItemSelect').value; 
+    let qty = parseInt(document.getElementById('combQtyInput').value) || 1;
+    let userPrice = parseFloat(document.getElementById('combPriceInput').value) || 0;
+    
+    if(!itemName) { alert("Please select a product item."); return; } 
+    let stockMatch = dataStore[node].stock.find(i => i.name === itemName); 
+    
+    if(stockMatch && stockMatch.qty < qty) { 
+        if(!confirm("⚠️ System Warning: Stock quantity is low (" + stockMatch.qty + " left). Do you want to proceed anyway for a Quotation or Pre-order?")) return; 
+    }
+    
+    let existing = combinedCart.find(c => c.business === node && c.name === itemName); 
+    if(existing) { 
+        existing.qty += qty; 
+        existing.price = userPrice;
+        existing.total = existing.qty * userPrice; 
+    } else { 
+        combinedCart.push({ business: node, name: itemName, price: userPrice, qty: qty, total: qty * userPrice }); 
+    }
+    renderCartTableGrid();
+}
+
+function removeCartItem(index) { combinedCart.splice(index, 1); renderCartTableGrid(); }
+
+function renderCartTableGrid() {
+    let tbody = document.getElementById('cartTableBody'); if(!tbody) return;
+    if(combinedCart.length === 0) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--gold-light);">Cart is empty. Add items from above.</td></tr>'; if(document.getElementById('combTotalBill')) document.getElementById('combTotalBill').value = 0; liveCalcCombTotal(); return; }
+    tbody.innerHTML = ""; let netTotal = 0;
+    combinedCart.forEach((item, idx) => { netTotal += item.total; tbody.innerHTML += '<tr><td><small>' + item.business.split(' ')[1] + '</small></td><td><strong>' + item.name + '</strong></td><td>Rs. ' + item.price + '</td><td>' + item.qty + '</td><td>Rs. ' + item.total + '</td><td><button type="button" onclick="removeCartItem(' + idx + ')" class="action-btn delete-btn">❌</button></td></tr>'; });
+    if(document.getElementById('combTotalBill')) document.getElementById('combTotalBill').value = netTotal; liveCalcCombTotal();
+}
+
+function liveCalcCombTotal() {
+    let totalEl = document.getElementById('combTotalBill'); let disEl = document.getElementById('combDiscount'); let paidEl = document.getElementById('combPaidInput'); let balEl = document.getElementById('combBalanceBill');
+    let total = totalEl ? (parseFloat(totalEl.value) || 0) : 0; let discount = disEl ? (parseFloat(disEl.value) || 0) : 0; let paid = paidEl ? (parseFloat(paidEl.value) || 0) : 0;
+    let finalNet = total - discount; let balance = finalNet - paid; if(balEl) balEl.value = balance < 0 ? 0 : balance;
+}
+
+function validateCombinedOrder() {
+    let cust = document.getElementById('combCustomer').value; 
+    if(!cust || combinedCart.length === 0) { 
+        alert("⚠️ Please setup a customer and add items to cart."); 
+        return false; 
+    }
+    
+    let paidAmt = document.getElementById('combPaidInput') ? parseFloat(document.getElementById('combPaidInput').value) : 0;
+    if (isNaN(paidAmt) || paidAmt < 0) {
+        alert("⚠️ Paid amount cannot be negative.");
+        return false;
+    }
+    return true;
+}
+
+function saveCombinedOrder(e) {
+    e.preventDefault(); 
+    if (!validateCombinedOrder()) return;
+
+    let cust = document.getElementById('combCustomer').value; 
+    let payMethod = document.getElementById('combPaymentMethod').value; 
+    let totalBill = document.getElementById('combTotalBill') ? parseFloat(document.getElementById('combTotalBill').value) : 0;
+    let disAmt = document.getElementById('combDiscount') ? (parseFloat(document.getElementById('combDiscount').value) || 0) : 0; 
+    let paidAmt = document.getElementById('combPaidInput') ? (parseFloat(document.getElementById('combPaidInput').value) || 0) : 0; 
+    let balanceAmt = document.getElementById('combBalanceBill') ? (parseFloat(document.getElementById('combBalanceBill').value) || 0) : 0; 
+    let invId = document.getElementById('combNo') ? document.getElementById('combNo').value : "COMB-1001"; 
+    let orderDate = document.getElementById('combDate') ? document.getElementById('combDate').value : ""; 
+    let address = document.getElementById('combAddress') ? document.getElementById('combAddress').value : "";
+    
+    let combinedOrderPayload = { action: "saveOrder", id: invId, date: orderDate, cust: cust, address: address, total: totalBill, discount: disAmt, paidAmount: paidAmt, balanceAmount: balanceAmt, method: payMethod, status: "Pending", business: "SK Creations", items: combinedCart };
+    
+    combinedCart.forEach(item => { let sMatch = dataStore[item.business].stock.find(i => i.name === item.name); if(sMatch) sMatch.qty -= item.qty; dataStore[item.business].orders.push({ id: invId, date: orderDate, cust: cust, address: address, item: item.name, qty: item.qty, total: item.total, discount: disAmt, paidAmount: paidAmt, balanceAmount: balanceAmt, method: payMethod, status: "Pending" }); });
+    
+    dispatchToCloud(combinedOrderPayload); let billBox = document.getElementById('combinedInvoiceBillBox'); if(billBox) billBox.innerHTML = generatePremiumInvoiceHTML(combinedOrderPayload, "SK Creations"); combinedCart = []; renderCartTableGrid();
+    if(document.getElementById('combCustomer')) document.getElementById('combCustomer').value = ""; if(document.getElementById('combAddress')) document.getElementById('combAddress').value = ""; if(document.getElementById('combPaidInput')) document.getElementById('combPaidInput').value = 0; if(document.getElementById('combDiscount')) document.getElementById('combDiscount').value = 0; updateNextCombinedInvoiceNumber(); reRenderEntireUI(); alert("🎉 SK Creation Universal Invoice Recorded & Synced successfully!");
+}
+
+function saveStaffUserLogic(e) {
+    e.preventDefault(); 
+    let idx = document.getElementById('editingUserIndex').value; 
+    let targetU = document.getElementById('uStaffName').value.trim().toLowerCase(); 
+    let targetP = document.getElementById('uStaffPass').value.trim();
+    let targetRole = document.getElementById('uRole').value; 
+
+    let targetPerms = { 
+        sales: document.getElementById('pSales').checked, 
+        workflow: document.getElementById('pWorkflow').checked,
+        quotation: document.getElementById('pQuotations').checked,
+        delivery: document.getElementById('pDelivery').checked,
+        bom: document.getElementById('pBom').checked,
+        stock: document.getElementById('pStock').checked, 
+        customer: document.getElementById('pCust').checked, 
+        expenses: document.getElementById('pExpenses').checked,
+        payroll: document.getElementById('pPayroll').checked,
+        pnl: document.getElementById('pPnl').checked,
+        users: document.getElementById('pUser').checked 
+    };
+
+    if (idx === "") { 
+        if (systemUsers.find(user => user.username.toLowerCase() === targetU)) { alert("⚠️ Error: Username taken."); return; } 
+        let newUserObj = { username: targetU, password: targetP, perms: targetPerms, role: targetRole }; 
+        systemUsers.push(newUserObj); 
+        dispatchToCloud({ action: "saveUser", ...newUserObj }); 
+        alert("🎉 User registered!"); 
+    } else { 
+        if (systemUsers[idx].username.toLowerCase() === "shan" && currentUser.toLowerCase() !== "shan") { alert("⛔ Master Admin layer cannot be altered."); return; } 
+        systemUsers[idx].username = targetU; 
+        systemUsers[idx].password = targetP; 
+        systemUsers[idx].perms = targetPerms; 
+        systemUsers[idx].role = targetRole; 
+        dispatchToCloud({ action: "saveUser", username: targetU, password: targetP, perms: targetPerms, role: targetRole }); 
+        alert("✨ Account modified!"); 
+        cancelUserEditState(); 
+    }
+    document.getElementById('userActualForm').reset(); reRenderEntireUI();
+}
+
+function triggerUserEdit(index) {
+    let matchedUser = systemUsers[index]; 
+    document.getElementById('editingUserIndex').value = index; 
+    document.getElementById('uStaffName').value = matchedUser.username; 
+    document.getElementById('uStaffPass').value = matchedUser.password;
+    if(matchedUser.role) { document.getElementById('uRole').value = matchedUser.role; }
+    
+    let permsObj = typeof matchedUser.perms === 'string' ? JSON.parse(matchedUser.perms) : matchedUser.perms;
+    
+    document.getElementById('pSales').checked = permsObj.sales || false; 
+    document.getElementById('pWorkflow').checked = permsObj.workflow !== undefined ? permsObj.workflow : (permsObj.sales || false);
+    document.getElementById('pQuotations').checked = permsObj.quotation !== undefined ? permsObj.quotation : (permsObj.sales || false);
+    document.getElementById('pDelivery').checked = permsObj.delivery !== undefined ? permsObj.delivery : (permsObj.sales || false);
+    document.getElementById('pBom').checked = permsObj.bom !== undefined ? permsObj.bom : (permsObj.stock || false);
+    document.getElementById('pStock').checked = permsObj.stock || false; 
+    document.getElementById('pCust').checked = permsObj.customer || false; 
+    document.getElementById('pExpenses').checked = permsObj.expenses !== undefined ? permsObj.expenses : (permsObj.sales || false);
+    document.getElementById('pPayroll').checked = permsObj.payroll !== undefined ? permsObj.payroll : (permsObj.sales || false);
+    document.getElementById('pPnl').checked = permsObj.pnl !== undefined ? permsObj.pnl : false;
+    document.getElementById('pUser').checked = permsObj.users || false; 
+
+    document.getElementById('userFormTitle').textContent = "✏️ Modify Account & Access Matrix";
+}
+
+function cancelUserEditState() { 
+    let editInput = document.getElementById('editingUserIndex');
+    if (editInput) editInput.value = ""; 
+    let titleEl = document.getElementById('userFormTitle');
+    if (titleEl) titleEl.textContent = "Create / Register Staff Accounts"; 
+    let formEl = document.getElementById('userActualForm');
+    if (formEl) formEl.reset();
+}
+
+function triggerUserDelete(index) { 
+    if(confirm("❗ Purge user?")) { 
+        dispatchToCloud({ action: "deleteUser", username: systemUsers[index].username }); 
+        systemUsers.splice(index, 1); 
+        reRenderEntireUI(); 
+    } 
+}
+
+function renderUserManagementTable() {
+    let uBody = document.getElementById('userTableBody'); 
+    if(!uBody) return; 
+    uBody.innerHTML = ""; 
+    systemUsers.forEach((user, index) => { 
+        let permsObj = typeof user.perms === 'string' ? JSON.parse(user.perms) : user.perms;
+        let permCount = Object.values(permsObj).filter(v => v === true).length;
+        let displayRole = user.role ? user.role : "STAFF";
+        let roleColor = displayRole === "MD" || displayRole === "Director" ? "#f39c12" : "var(--gold-primary)";
+
+        uBody.innerHTML += '<tr><td><strong>' + user.username + '</strong></td><td><code>' + user.password + '</code></td><td><strong style="color:'+roleColor+';">' + displayRole + '</strong></td><td><span style="color:var(--accent-bank); font-size:12px; font-weight:700;">' + permCount + ' Modules Granted</span></td><td><div class="action-btns"><button class="action-btn edit-btn" onclick="triggerUserEdit(' + index + ')">✏️</button><button class="action-btn delete-btn" onclick="triggerUserDelete(' + index + ')">❌</button></div></td></tr>'; 
+    }); 
+}
+
+function updateOrderStatusDirect(orderId, business, newStatus) {
+    if(orderId.startsWith("COMB")) {
+        ["SK Crafts", "SK Fashion", "SK Digital"].forEach(b => {
+            let ordersToUpdate = dataStore[b].orders.filter(o => o.id === orderId);
+            ordersToUpdate.forEach(o => { 
+                o.status = newStatus; 
+                dispatchToCloud({ action: "updateOrderStatus", id: o.id, status: newStatus, business: b }); 
+            });
+        });
+    } else {
+        let ordersToUpdate = dataStore[business].orders.filter(o => o.id === orderId);
+        ordersToUpdate.forEach(o => { 
+            o.status = newStatus; 
+            dispatchToCloud({ action: "updateOrderStatus", id: o.id, status: newStatus, business: business }); 
+        });
+    }
+    reRenderEntireUI();
+}
+
+function toggleOrderStatus(orderId, business) {
+    let statuses = ["Pending", "Processing", "Ready", "Delivered"];
+    let isComb = orderId.startsWith("COMB");
+    let orderArr = [];
+    
+    if(isComb) {
+        ["SK Crafts", "SK Fashion", "SK Digital"].forEach(b => {
+            let match = dataStore[b].orders.filter(o => o.id === orderId);
+            if(match.length > 0) orderArr.push(...match);
+        });
+    } else {
+        orderArr = dataStore[business].orders.filter(o => o.id === orderId);
+    }
+
+    if(orderArr.length > 0) {
+        let currentStatus = orderArr[0].status || "Pending";
+        let currIdx = statuses.indexOf(currentStatus);
+        let newStatus = statuses[(currIdx + 1) % statuses.length];
+        updateOrderStatusDirect(orderId, business, newStatus);
+    }
+}
+
+function renderKanbanBoard(activeOrders) {
+    let pendingBox = document.getElementById('kb-pending');
+    let processingBox = document.getElementById('kb-processing');
+    let readyBox = document.getElementById('kb-ready');
+    if(!pendingBox || !processingBox || !readyBox) return;
+
+    let map = new Map();
+    activeOrders.forEach(o => {
+        if(!map.has(o.id)){
+            map.set(o.id, { id: o.id, date: o.date, cust: o.cust, item: o.item, status: o.status || "Pending", count: 1 });
+        } else {
+            let existing = map.get(o.id);
+            existing.count++;
+            existing.item = "Multiple Items (" + existing.count + ")";
+        }
+    });
+    
+    let groupedOrders = Array.from(map.values()).reverse();
+    let pendingHTML = "", processingHTML = "", readyHTML = "";
+    let pCount = 0, prCount = 0, rCount = 0;
+
+    groupedOrders.forEach(o => {
+        let card = `<div class="kb-card">
+            <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                <strong style="color:var(--gold-primary);">${o.id}</strong>
+                <span style="font-size:11px; color:#aaa;">${o.date}</span>
+            </div>
+            <div style="font-size:13px; margin-bottom:10px; color:var(--gold-light);">
+                <div style="margin-bottom:3px;">👤 ${o.cust}</div>
+                <div>📦 ${o.item}</div>
+            </div>
+            <div>
+                <select onchange="updateOrderStatusDirect('${o.id}', '${currentBusiness}', this.value)" style="width:100%; padding:6px; font-size:12px; background:#0a0a0a; border:1px solid rgba(212,175,55,0.3); color:var(--gold-light); border-radius:6px; cursor:pointer;">
+                    <option value="Pending" ${o.status==='Pending'?'selected':''}>📥 Pending</option>
+                    <option value="Processing" ${o.status==='Processing'?'selected':''}>⚙️ Processing</option>
+                    <option value="Ready" ${o.status==='Ready'?'selected':''}>📦 Ready for Dispatch</option>
+                    <option value="Delivered" ${o.status==='Delivered'?'selected':''}>✅ Delivered</option>
+                </select>
+            </div>
+        </div>`;
+
+        if(o.status === "Pending") { pendingHTML += card; pCount++; }
+        else if(o.status === "Processing") { processingHTML += card; prCount++; }
+        else if(o.status === "Ready") { readyHTML += card; rCount++; }
+    });
+
+    pendingBox.innerHTML = pendingHTML || '<p style="text-align:center; color:#555; font-size:13px; margin-top:20px;">No pending orders</p>';
+    processingBox.innerHTML = processingHTML || '<p style="text-align:center; color:#555; font-size:13px; margin-top:20px;">No orders in production</p>';
+    readyBox.innerHTML = readyHTML || '<p style="text-align:center; color:#555; font-size:13px; margin-top:20px;">No orders ready</p>';
+
+    document.getElementById('kb-count-pending').textContent = pCount;
+    document.getElementById('kb-count-processing').textContent = prCount;
+    document.getElementById('kb-count-ready').textContent = rCount;
+}
+
+function savePayrollLogic(e) {
+    e.preventDefault();
+    let prName = document.getElementById('prName').value.trim();
+    let prDate = document.getElementById('prDate').value;
+    let prType = document.getElementById('prType').value;
+    let prAmount = parseFloat(document.getElementById('prAmount').value);
+    
+    if (isNaN(prAmount) || prAmount <= 0) {
+        alert("⚠️ Invalid amount entered for payroll.");
+        return;
+    }
+    
+    let cloudBiz = currentBusiness === "SK Crafts" ? "SK Creations" : currentBusiness;
+
+    let prObj = { date: prDate, name: prName, type: prType, amount: prAmount, business: cloudBiz };
+    dataStore[currentBusiness].payroll.push(prObj);
+    dispatchToCloud({ action: "savePayroll", ...prObj });
+
+    let expObj = { date: prDate, desc: `Staff Payroll: ${prName} (${prType})`, amount: prAmount, business: cloudBiz };
+    dataStore[currentBusiness].expenses.push(expObj);
+    dispatchToCloud({ action: "saveExpense", ...expObj });
+
+    alert("💼 Payroll Record Saved! (Automatic wiyadam list ekatath ekathu wuna)");
+    document.getElementById('prName').value = "";
+    document.getElementById('prAmount').value = "";
+    reRenderEntireUI();
+}
+
+function renderPayroll() {
+    let pBody = document.getElementById('payrollTableBody');
+    if(!pBody) return;
+    pBody.innerHTML = "";
+    let list = dataStore[currentBusiness].payroll || [];
+    
+    if(list.length === 0) {
+        pBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No payroll records found.</td></tr>';
+        return;
+    }
+    
+    [...list].reverse().forEach((p, idx) => {
+        let actualIdx = list.indexOf(p);
+        pBody.innerHTML += `<tr>
+            <td>${p.date}</td>
+            <td><strong>${p.name}</strong></td>
+            <td><span style="background:rgba(52,152,219,0.2); color:#3498db; padding:4px 8px; border-radius:6px; font-size:12px; font-weight:bold;">${p.type}</span></td>
+            <td style="color:var(--gold-primary); font-weight:bold;">Rs. ${p.amount.toLocaleString()}</td>
+            <td><button onclick="deletePayroll(${actualIdx})" class="action-btn delete-btn">❌</button></td>
+        </tr>`;
+    });
+}
+
+function deletePayroll(idx) {
+    if(confirm("❗ Are you sure you want to delete this payroll record? (Note: Related expense will remain unless manually deleted from Expenses Hub)")) {
+        let p = dataStore[currentBusiness].payroll[idx];
+        let cloudBiz = currentBusiness === "SK Crafts" ? "SK Creations" : currentBusiness;
+        dispatchToCloud({ action: "deletePayroll", date: p.date, name: p.name, type: p.type, amount: p.amount, business: cloudBiz });
+        dataStore[currentBusiness].payroll.splice(idx, 1);
+        reRenderEntireUI();
+    }
+}
+function saveExpenseLogic(e) {
+    e.preventDefault(); 
+    let date = document.getElementById('eDate').value; 
+    let desc = document.getElementById('eDesc').value; 
+    let amount = parseFloat(document.getElementById('eAmount').value);
+    
+    if (isNaN(amount) || amount <= 0) {
+        alert("⚠️ Expense amount must be a positive number.");
+        return;
+    }
+    
+    let expenseObj = { date: date, desc: desc, amount: amount, business: currentBusiness === "SK Crafts" ? "SK Creations" : currentBusiness }; 
+    dataStore[currentBusiness].expenses.push(expenseObj); 
+    dispatchToCloud({ action: "saveExpense", ...expenseObj });
+    alert("💰 Expense Added Successfully!"); 
+    document.getElementById('eDesc').value = ""; 
+    document.getElementById('eAmount').value = ""; 
+    reRenderEntireUI();
+}
+
+function deleteExpense(idx) { 
+    if(confirm("❗ Remove this expense?")) { 
+        let exp = dataStore[currentBusiness].expenses[idx];
+        let cloudBiz = currentBusiness === "SK Crafts" ? "SK Creations" : currentBusiness;
+        dispatchToCloud({ action: "deleteExpense", date: exp.date, desc: exp.desc, amount: exp.amount, business: cloudBiz });
+        dataStore[currentBusiness].expenses.splice(idx, 1); 
+        reRenderEntireUI(); 
+    } 
+}
+
+function renderPnL() {
+    let biz = dataStore[currentBusiness];
+    if(!biz) return;
+    
+    let monthFilter = document.getElementById('pnlMonth') ? document.getElementById('pnlMonth').value : ""; 
+    let activeOrders = biz.orders;
+    let activeExpenses = biz.expenses;
+
+    if(monthFilter) {
+        activeOrders = activeOrders.filter(o => o.date.startsWith(monthFilter));
+        activeExpenses = activeExpenses.filter(e => e.date.startsWith(monthFilter));
+    }
+
+    let grossSales = activeOrders.reduce((sum, o) => sum + parseFloat(o.total || 0), 0);
+    let totalDiscounts = activeOrders.reduce((sum, o) => sum + parseFloat(o.discount || 0), 0);
+    let netRev = grossSales - totalDiscounts;
+
+    let expMap = {};
+    activeExpenses.forEach(e => {
+        let key = e.desc;
+        if(key.startsWith("Staff Payroll")) key = "👥 Staff Salary & Labor";
+        if(!expMap[key]) expMap[key] = 0;
+        expMap[key] += parseFloat(e.amount || 0);
+    });
+
+    let totalExp = 0; let expHtml = "";
+    for(let key in expMap) {
+        totalExp += expMap[key];
+        expHtml += `<tr><td style="padding-top:10px; padding-bottom:10px;">${key}</td><td style="text-align:right; color:#ff7675; padding-top:10px; padding-bottom:10px;">Rs. ${expMap[key].toLocaleString('en-US', {minimumFractionDigits: 2})}</td></tr>`;
+    }
+    if(Object.keys(expMap).length === 0) expHtml = `<tr><td colspan="2" style="text-align:center; color:rgba(212,175,55,0.5);">No expenses recorded for this period.</td></tr>`;
+
+    let netProfit = netRev - totalExp;
+
+    let grossEl = document.getElementById('pnlGrossSales'); if(grossEl) grossEl.textContent = "Rs. " + grossSales.toLocaleString('en-US', {minimumFractionDigits: 2});
+    let disEl = document.getElementById('pnlDiscounts'); if(disEl) disEl.textContent = "- Rs. " + totalDiscounts.toLocaleString('en-US', {minimumFractionDigits: 2});
+    let netEl = document.getElementById('pnlNetRev'); if(netEl) netEl.textContent = "Rs. " + netRev.toLocaleString('en-US', {minimumFractionDigits: 2});
+    
+    let listEl = document.getElementById('pnlExpensesList'); if(listEl) listEl.innerHTML = expHtml;
+    let totExpEl = document.getElementById('pnlTotalExp'); if(totExpEl) totExpEl.textContent = "Rs. " + totalExp.toLocaleString('en-US', {minimumFractionDigits: 2});
+
+    let npEl = document.getElementById('pnlNetProfit');
+    if(npEl) {
+        npEl.textContent = "Rs. " + Math.abs(netProfit).toLocaleString('en-US', {minimumFractionDigits: 2});
+        if(netProfit < 0) { npEl.style.color = "#ff4757"; npEl.textContent = "(LOSS) " + npEl.textContent; } 
+        else { npEl.style.color = "#1dd1a1"; }
+    }
+}
+
+function renderDeliveries() {
+    let dBody = document.getElementById('deliveryTableBody'); if(!dBody) return;
+    dBody.innerHTML = "";
+    
+    let dList = dataStore[currentBusiness].deliveries || [];
+    if(dList.length === 0) { dBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No deliveries recorded yet.</td></tr>'; return; }
+    
+    dList.forEach((d, idx) => {
+        let dColor = d.delivery_status === "Delivered" ? "#2ecc71" : (d.delivery_status === "Returned" ? "#e74c3c" : "#f39c12");
+        let cColor = d.cod_status === "Received" ? "#2ecc71" : "#f39c12";
+        
+        dBody.innerHTML += `<tr>
+            <td><strong>${d.invoice_no}</strong></td>
+            <td>${d.courier}<br><small style="color:var(--gold-primary);">${d.tracking_no}</small></td>
+            <td>Rs. ${d.cod_amount.toLocaleString()}</td>
+            <td>
+                <select onchange="updateDeliveryStatus(${idx}, 'delivery_status', this.value)" style="padding:4px; width:120px; background:rgba(10,15,25,0.9); border-color:${dColor}; color:${dColor}; font-size:12px;">
+                    <option value="Processing" ${d.delivery_status==='Processing'?'selected':''}>Processing</option>
+                    <option value="Dispatched" ${d.delivery_status==='Dispatched'?'selected':''}>Dispatched</option>
+                    <option value="Delivered" ${d.delivery_status==='Delivered'?'selected':''}>Delivered</option>
+                    <option value="Returned" ${d.delivery_status==='Returned'?'selected':''}>Returned</option>
+                </select>
+            </td>
+            <td>
+                <select onchange="updateDeliveryStatus(${idx}, 'cod_status', this.value)" style="padding:4px; width:110px; background:rgba(10,15,25,0.9); border-color:${cColor}; color:${cColor}; font-size:12px;">
+                    <option value="Pending" ${d.cod_status==='Pending'?'selected':''}>Pending</option>
+                    <option value="Received" ${d.cod_status==='Received'?'selected':''}>Received</option>
+                </select>
+            </td>
+        </tr>`;
+    });
+}
+
+function saveDeliveryLogic(e) {
+    e.preventDefault();
+    let invNo = document.getElementById('delInvNo').value;
+    let courier = document.getElementById('delCourier').value;
+    let trackNo = document.getElementById('delTracking').value;
+    let codAmt = parseFloat(document.getElementById('delCod').value) || 0;
+    
+    if(!invNo) { alert("⚠️ Please select an Invoice Number to dispatch."); return; }
+    if(isNaN(codAmt) || codAmt < 0) { alert("⚠️ COD Value cannot be negative."); return; }
+    
+    let dObj = { invoice_no: invNo, courier: courier, tracking_no: trackNo, cod_amount: codAmt, delivery_status: "Dispatched", cod_status: codAmt > 0 ? "Pending" : "Received", business: currentBusiness === "SK Crafts" ? "SK Creations" : currentBusiness };
+    
+    let existingIndex = dataStore[currentBusiness].deliveries.findIndex(d => d.invoice_no === invNo);
+    if(existingIndex !== -1) {
+        dataStore[currentBusiness].deliveries[existingIndex] = dObj;
+    } else {
+        dataStore[currentBusiness].deliveries.push(dObj);
+    }
+    
+    dispatchToCloud({ action: "saveDelivery", ...dObj });
+    alert("🚚 Order Dispatched Successfully!");
+    
+    document.getElementById('delTracking').value = "";
+    document.getElementById('delCod').value = "0";
+    reRenderEntireUI();
+}
+
+function updateDeliveryStatus(idx, field, value) {
+    let dObj = dataStore[currentBusiness].deliveries[idx];
+    dObj[field] = value;
+    dispatchToCloud({ action: "saveDelivery", ...dObj });
+    reRenderEntireUI();
+}
+
+function autoFillDeliveryCod() {
+    let invNo = document.getElementById('delInvNo').value;
+    let codInput = document.getElementById('delCod');
+    if(!invNo || !codInput) return;
+    
+    let orders = dataStore[currentBusiness].orders.filter(o => o.id === invNo);
+    if(orders.length > 0) {
+        let baseOrder = orders[0];
+        if(baseOrder.method === "COD") {
+            codInput.value = baseOrder.balanceAmount || 0;
+        } else {
+            codInput.value = 0;
+        }
+    }
+}
+
+function renderQuotations() {
+    let qBody = document.getElementById('quotationTableBody'); if(!qBody) return;
+    qBody.innerHTML = "";
+    let map = new Map();
+    dataStore[currentBusiness].quotations.forEach(q => {
+        if(!map.has(q.id)) { map.set(q.id, { id: q.id, date: q.date, cust: q.cust, total: parseFloat(q.total)-parseFloat(q.discount||0), status: q.status, count: 1 }); }
+        else { let ex = map.get(q.id); ex.total += parseFloat(q.total); ex.count++; }
+    });
+    let qList = Array.from(map.values()).reverse();
+    if(qList.length === 0) { qBody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No quotations found in this node.</td></tr>'; return; }
+    qList.forEach(q => {
+        let sColor = q.status === "Accepted" ? "#2ecc71" : (q.status === "Pending" ? "#f39c12" : "#e74c3c");
+        let actions = `<button class="action-btn edit-btn" onclick="previewQuotation('${q.id}')">👁️ View</button>`;
+        if(q.status === "Pending") actions += `<button class="action-btn" onclick="acceptQuotation('${q.id}')" style="background:#2ecc71; color:#111;">✅ Accept</button>`;
+        
+        actions += `<button class="action-btn delete-btn" onclick="deleteQuotation('${q.id}')">❌</button>`;
+        
+        qBody.innerHTML += `<tr><td><strong>${q.id}</strong></td><td>${q.date}</td><td>${q.cust}</td><td>Rs. ${q.total.toLocaleString()}</td><td style="color:${sColor}; font-weight:700;">${q.status}</td><td><div class="action-btns">${actions}</div></td></tr>`;
+    });
+}
+
+function previewQuotation(qId) {
+    let qMatch = []; let qBiz = currentBusiness;
+    if(qId.includes("COMB")) {
+        ["SK Crafts", "SK Fashion", "SK Digital"].forEach(b => {
+            let matches = dataStore[b].quotations.filter(q => q.id === qId);
+            if(matches.length > 0) { qMatch.push(...matches); qBiz = "SK Creations"; }
+        });
+    } else { qMatch = dataStore[currentBusiness].quotations.filter(q => q.id === qId); }
+    
+    if(qMatch.length === 0) return;
+    let baseRow = qMatch[0];
+    let qObj = { id: baseRow.id, date: baseRow.date, cust: baseRow.cust, address: "TBA", discount: parseFloat(baseRow.discount||0), paidAmount: 0, balanceAmount: 0, method: "N/A", items: qMatch.map(r => ({ business: r.business, name: r.item, price: parseFloat(r.total)/parseInt(r.qty || 1), qty: r.qty, total: parseFloat(r.total) })), total: qMatch.reduce((sum, r) => sum + parseFloat(r.total), 0), isQuotation: true };
+    
+    document.getElementById('quotationBillBox').innerHTML = generatePremiumInvoiceHTML(qObj, qBiz);
+}
+
+function acceptQuotation(qId) {
+    if(confirm("Confirm: Accept this quotation? This will automatically generate a new Invoice and deduct stock items.")) {
+        let qMatch = []; let qBiz = currentBusiness; let isComb = false;
+        
+        if(qId.includes("COMB")) {
+            isComb = true; qBiz = "SK Creations";
+            ["SK Crafts", "SK Fashion", "SK Digital"].forEach(b => {
+                let matches = dataStore[b].quotations.filter(q => q.id === qId);
+                if(matches.length > 0) qMatch.push(...matches);
+            });
+        } else {
+            qMatch = dataStore[currentBusiness].quotations.filter(q => q.id === qId);
+        }
+        
+        if(qMatch.length === 0) return;
+        
+        if(isComb) {
+            ["SK Crafts", "SK Fashion", "SK Digital"].forEach(b => {
+                dataStore[b].quotations.forEach(q => { if(q.id === qId) q.status = "Accepted"; });
+            });
+        } else {
+            dataStore[currentBusiness].quotations.forEach(q => { if(q.id === qId) q.status = "Accepted"; });
+        }
+        dispatchToCloud({ action: "updateQuotationStatus", id: qId, status: "Accepted", business: isComb ? "SK Creations" : currentBusiness });
+
+        let newInvId = "";
+        let maxNum = 1000;
+        if(isComb) {
+            ["SK Crafts", "SK Fashion", "SK Digital"].forEach(b => {
+                dataStore[b].orders.forEach(o => { if (o.id && o.id.toUpperCase().startsWith("COMB-")) { let num = parseInt(o.id.split('-')[1]); if (!isNaN(num) && num > maxNum) maxNum = num; } });
+            });
+            newInvId = "COMB-" + (maxNum + 1);
+        } else {
+            let pfx = currentBusiness === "SK Crafts" ? "SKC" : currentBusiness === "SK Fashion" ? "SKF" : "SKD";
+            dataStore[currentBusiness].orders.forEach(o => { if (o.id && o.id.toUpperCase().startsWith(pfx + "-")) { let num = parseInt(o.id.split('-')[1]); if (!isNaN(num) && num > maxNum) maxNum = num; } });
+            newInvId = pfx + "-" + (maxNum + 1);
+        }
+
+        let baseRow = qMatch[0];
+        let todayStr = new Date().toISOString().split('T')[0];
+        let reconstructedItems = qMatch.map(r => ({ business: r.business, name: r.item, price: parseFloat(r.total)/parseInt(r.qty || 1), qty: r.qty, total: parseFloat(r.total) }));
+        let grandTotal = qMatch.reduce((sum, r) => sum + parseFloat(r.total), 0);
+        let finalDis = parseFloat(baseRow.discount||0);
+        
+        let orderData = { action: "saveOrder", id: newInvId, date: todayStr, cust: baseRow.cust, address: "TBA", total: grandTotal, discount: finalDis, paidAmount: grandTotal - finalDis, balanceAmount: 0, method: "Bank Transfer", status: "Delivered", business: qBiz, items: reconstructedItems };
+        
+        reconstructedItems.forEach(item => { 
+            let bz = currentBusiness;
+            if(isComb) {
+                ["SK Crafts", "SK Fashion", "SK Digital"].forEach(b => {
+                    if (dataStore[b].stock.find(i => i.name === item.name)) bz = b;
+                });
+            }
+            
+            let stockMatch = dataStore[bz].stock.find(i => i.name === item.name); 
+            if(stockMatch) {
+                stockMatch.qty -= item.qty; 
+                dispatchToCloud({ action: "saveStock", business: bz, name: stockMatch.name, qty: stockMatch.qty, price: stockMatch.price });
+            }
+            dataStore[bz].orders.push({ id: newInvId, date: todayStr, cust: baseRow.cust, address: "TBA", item: item.name, qty: item.qty, total: item.total, discount: finalDis, paidAmount: grandTotal - finalDis, balanceAmount: 0, method: "Bank Transfer", status: "Delivered" }); 
+        });
+
+        dispatchToCloud(orderData);
+        alert("🎉 Quotation Accepted! New Invoice [" + newInvId + "] generated automatically.");
+        reRenderEntireUI();
+        
+        document.getElementById('quotationBillBox').innerHTML = generatePremiumInvoiceHTML(orderData, qBiz);
+    }
+}
+
+function deleteQuotation(qId) {
+    if(confirm("❗ Are you sure you want to permanently delete this quotation?")) {
+        let isComb = qId.includes("COMB");
+        if (isComb) {
+            ["SK Crafts", "SK Fashion", "SK Digital"].forEach(b => {
+                dataStore[b].quotations = dataStore[b].quotations.filter(q => q.id !== qId);
+            });
+        } else {
+            dataStore[currentBusiness].quotations = dataStore[currentBusiness].quotations.filter(q => q.id !== qId);
+        }
+        dispatchToCloud({ action: "deleteQuotation", id: qId, business: isComb ? "SK Creations" : currentBusiness });
+        reRenderEntireUI();
+    }
+}
+
+function saveAsQuotationLogic(type) {
+    let isComb = type === 'combined';
+    let cust = document.getElementById(isComb ? 'combCustomer' : 'invCustomer').value;
+    let cart = isComb ? combinedCart : singleCart;
+    let totalBill = parseFloat(document.getElementById(isComb ? 'combTotalBill' : 'invTotal').value) || 0;
+    
+    if(!cust || cart.length === 0) { alert("Please setup a customer and add items to cart before quoting."); return; }
+    
+    let disAmt = parseFloat(document.getElementById(isComb ? 'combDiscount' : 'invDiscount').value) || 0;
+    let qDate = document.getElementById(isComb ? 'combDate' : 'invDate').value;
+    
+    let maxNum = 1000;
+    let qPrefix = isComb ? "Q-COMB" : (currentBusiness === "SK Crafts" ? "Q-SKC" : currentBusiness === "SK Fashion" ? "Q-SKF" : "Q-SKD");
+    
+    ["SK Crafts", "SK Fashion", "SK Digital"].forEach(b => {
+        dataStore[b].quotations.forEach(q => { if(q.id.startsWith(qPrefix)) { let num = parseInt(q.id.split('-')[2] || q.id.split('-')[1]); if(!isNaN(num) && num > maxNum) maxNum = num; }});
+    });
+    
+    let qId = isComb ? "Q-COMB-" + (maxNum+1) : qPrefix + "-" + (maxNum+1);
+    let qData = { action: "saveQuotation", id: qId, date: qDate, cust: cust, total: totalBill, discount: disAmt, status: "Pending", business: isComb ? "SK Creations" : currentBusiness, items: cart };
+    
+    cart.forEach(item => {
+        let targetBz = isComb ? item.business : currentBusiness;
+        dataStore[targetBz].quotations.push({ id: qId, date: qDate, cust: cust, item: item.name, qty: item.qty, total: item.total, discount: disAmt, status: "Pending", business: isComb ? "SK Creations" : currentBusiness });
+    });
+    
+    dispatchToCloud(qData);
+    alert("📝 Draft Quotation Saved! You can view it in the 'Quotations Hub'.");
+    
+    if(isComb) { combinedCart = []; renderCartTableGrid(); } else { singleCart = []; renderSingleCart(); }
+    document.getElementById(isComb ? 'combCustomer' : 'invCustomer').value = "";
+    reRenderEntireUI();
+}
+
+function saveStockItemLogic(e) { 
+    e.preventDefault(); 
+    let idx = document.getElementById('editingStockIndex').value; 
+    let pName = document.getElementById('pName').value.trim();
+    let pQty = parseInt(document.getElementById('pQty').value);
+    let pPrice = parseFloat(document.getElementById('pPrice').value);
+    
+    if (isNaN(pQty) || pQty < 0) { alert("⚠️ Invalid Stock Quantity."); return; }
+    if (isNaN(pPrice) || pPrice < 0) { alert("⚠️ Invalid Price."); return; }
+
+    let cloudBiz = currentBusiness === "SK Crafts" ? "SK Creations" : currentBusiness; 
+
+    if(idx === "") { 
+        let existingIndex = dataStore[currentBusiness].stock.findIndex(i => i.name.toLowerCase() === pName.toLowerCase());
+        if (existingIndex !== -1) {
+            dataStore[currentBusiness].stock[existingIndex].qty += pQty;
+            dataStore[currentBusiness].stock[existingIndex].price = pPrice; 
+            let itemObj = dataStore[currentBusiness].stock[existingIndex];
+            dispatchToCloud({ action: "saveStock", business: cloudBiz, ...itemObj }); 
+            alert("📦 Existing Stock Updated! (Aluth thogaya parana ekata auto ekathu wuna)"); 
+        } else {
+            let itemObj = { name: pName, qty: pQty, price: pPrice };
+            dataStore[currentBusiness].stock.push(itemObj); 
+            dispatchToCloud({ action: "saveStock", business: cloudBiz, ...itemObj }); 
+            alert("📦 New item appended!"); 
+        }
+    } else { 
+        let itemObj = { name: pName, qty: pQty, price: pPrice };
+        dataStore[currentBusiness].stock[idx] = itemObj; 
+        dispatchToCloud({ action: "saveStock", business: cloudBiz, ...itemObj }); 
+        alert("✨ Stock item modified & synchronized with local db!"); 
+        cancelStockEditState(); 
+    } 
+    document.getElementById('stockActualForm').reset(); 
+    // දත්ත සේව් වුණාම අනිත් හැම ටැබ් එකකටම පණිවිඩයක් යවනවා
+    localStorage.setItem('db_update', Date.now());
+    reRenderEntireUI(); 
+}
+
+function triggerStockEdit(index) { let matchedItem = dataStore[currentBusiness].stock[index]; document.getElementById('editingStockIndex').value = index; document.getElementById('pName').value = matchedItem.name; document.getElementById('pQty').value = matchedItem.qty; document.getElementById('pPrice').value = matchedItem.price; document.getElementById('stockFormTitle').textContent = "✏️ Modify Inventory Item Asset"; }
+function cancelStockEditState() { document.getElementById('editingStockIndex').value = ""; if(document.getElementById('stockFormTitle')) document.getElementById('stockFormTitle').textContent = "Add Product Item to Warehouse"; }
+function triggerStockDelete(index) { 
+    if(confirm("❗ Erase item?")) { 
+        let item = dataStore[currentBusiness].stock[index];
+        let cloudBiz = currentBusiness === "SK Crafts" ? "SK Creations" : currentBusiness;
+        dispatchToCloud({ action: "deleteStock", name: item.name, business: cloudBiz });
+        dataStore[currentBusiness].stock.splice(index, 1); 
+        reRenderEntireUI(); 
+    } 
+}
+
+function saveCustomerProfileLogic(e) { 
+    e.preventDefault(); 
+    let idx = document.getElementById('editingCustomerIndex').value; 
+    let biz = dataStore[currentBusiness]; 
+    let cloudBiz = currentBusiness === "SK Crafts" ? "SK Creations" : currentBusiness; 
+    
+    let cName = document.getElementById('cName').value.trim();
+    let cPhone = document.getElementById('cPhone').value.trim();
+    let cAddress = document.getElementById('cAddress').value.trim();
+    
+    if (cPhone.length < 9) {
+        alert("⚠️ Please enter a valid phone number.");
+        return;
+    }
+
+    if(idx === "") { 
+        let nId = "C-" + (biz.customers.length + 101); 
+        let customerObj = { id: nId, name: cName, phone: cPhone, address: cAddress }; 
+        biz.customers.push(customerObj); 
+        dispatchToCloud({ action: "saveCustomer", business: cloudBiz, ...customerObj }); 
+        alert("👥 Customer added!"); 
+        cancelCustomerEditState();
+    } else { 
+        biz.customers[idx].name = cName; 
+        biz.customers[idx].phone = cPhone; 
+        biz.customers[idx].address = cAddress; 
+        dispatchToCloud({ action: "saveCustomer", business: cloudBiz, ...biz.customers[idx] }); 
+        alert("👥 Customer modified!"); 
+        cancelCustomerEditState(); 
+    } 
+    document.getElementById('customerActualForm').reset(); 
+    // දත්ත සේව් වුණාම අනිත් හැම ටැබ් එකකටම පණිවිඩයක් යවනවා
+    localStorage.setItem('db_update', Date.now());
+    reRenderEntireUI(); 
+}
+
+function triggerCustomerEdit(index) { let matchedCust = dataStore[currentBusiness].customers[index]; document.getElementById('editingCustomerIndex').value = index; document.getElementById('cName').value = matchedCust.name; document.getElementById('cPhone').value = matchedCust.phone; document.getElementById('cAddress').value = matchedCust.address; }
+function cancelCustomerEditState() { document.getElementById('editingCustomerIndex').value = ""; }
+function triggerCustomerDelete(index) { 
+    if(confirm("❗ Erase customer?")) { 
+        let cust = dataStore[currentBusiness].customers[index];
+        let cloudBiz = currentBusiness === "SK Crafts" ? "SK Creations" : currentBusiness;
+        dispatchToCloud({ action: "deleteCustomer", id: cust.id, business: cloudBiz });
+        dataStore[currentBusiness].customers.splice(index, 1); 
+        reRenderEntireUI(); 
+    } 
+}
+
+function autoFillPrice() { let itemEl = document.getElementById('invItem'); if(!itemEl) return; let match = dataStore[currentBusiness].stock.find(i => i.name === itemEl.value); let priceEl = document.getElementById('invPrice'); if(match && priceEl) priceEl.value = match.price; }
+function autoFillCustomerAddress() { let custEl = document.getElementById('invCustomer'); if(!custEl) return; let match = dataStore[currentBusiness].customers.find(c => c.name === custEl.value); let addrEl = document.getElementById('invAddress'); if(match && addrEl) addrEl.value = match.address; }
+
+function addSingleItemToCart() { 
+    let item = document.getElementById('invItem').value; 
+    let price = parseFloat(document.getElementById('invPrice').value) || 0; 
+    let qty = parseInt(document.getElementById('invQty').value) || 1; 
+    
+    if(!item) { alert("Please select an item"); return; } 
+    let stockMatch = dataStore[currentBusiness].stock.find(i => i.name === item); 
+    
+    if(stockMatch && stockMatch.qty < qty) { 
+        if(!confirm("⚠️ System Warning: Stock quantity is low (" + stockMatch.qty + " left). Do you want to proceed anyway for a Quotation or Pre-order?")) return; 
+    } 
+    
+    let existing = singleCart.find(c => c.name === item); 
+    if(existing) { 
+        existing.qty += qty; 
+        existing.price = price;
+        existing.total = existing.qty * price; 
+    } else { 
+        singleCart.push({ name: item, price: price, qty: qty, total: price * qty, business: currentBusiness }); 
+    } 
+    renderSingleCart(); 
+}
+
+function removeSingleCartItem(idx) { singleCart.splice(idx, 1); renderSingleCart(); }
+
+function renderSingleCart() { let tbody = document.getElementById('singleCartBody'); if(!tbody) return; if(singleCart.length === 0) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--gold-light);">Cart is empty. Add items from above.</td></tr>'; if(document.getElementById('invTotal')) document.getElementById('invTotal').value = 0; liveCalcTotal(); return; } tbody.innerHTML = ""; let net = 0; singleCart.forEach((item, i) => { net += item.total; tbody.innerHTML += '<tr><td>' + item.name + '</td><td>Rs. ' + item.price + '</td><td>' + item.qty + '</td><td>Rs. ' + item.total + '</td><td><button type="button" onclick="removeSingleCartItem(' + i + ')" class="action-btn delete-btn">❌</button></td></tr>'; }); if(document.getElementById('invTotal')) document.getElementById('invTotal').value = net; liveCalcTotal(); }
+
+function liveCalcTotal() { let totEl = document.getElementById('invTotal'); let disEl = document.getElementById('invDiscount'); let paidEl = document.getElementById('invPaid'); let balEl = document.getElementById('invBalance'); let total = totEl ? (parseFloat(totEl.value) || 0) : 0; let discount = disEl ? (parseFloat(disEl.value) || 0) : 0; let paid = paidEl ? (parseFloat(paidEl.value) || 0) : 0; let finalNet = total - discount; let balance = finalNet - paid; if(balEl) balEl.value = balance < 0 ? 0 : balance; }
+
+function selectPaymentMethod(val) { document.querySelectorAll('.chip').forEach(c => c.classList.remove('selected')); if(window.event && window.event.target) window.event.target.classList.add('selected'); let payEl = document.getElementById('invPayment'); if(payEl) payEl.value = val; }
+
+function validateOrderForm() {
+    let cust = document.getElementById('invCustomer').value;
+    if (!cust || singleCart.length === 0) { 
+        alert("⚠️ Please setup a customer and add items to cart."); 
+        return false; 
+    }
+    
+    let paidAmt = document.getElementById('invPaid') ? parseFloat(document.getElementById('invPaid').value) : 0;
+    if (isNaN(paidAmt) || paidAmt < 0) {
+        alert("⚠️ Paid amount cannot be negative.");
+        return false;
+    }
+    
+    return true;
+}
+
+function saveNewOrder(e) {
+    e.preventDefault(); 
+    if (!validateOrderForm()) return;
+
+    let pay = document.getElementById('invPayment').value; 
+    let cust = document.getElementById('invCustomer').value; 
+    let invId = document.getElementById('invNo').value; 
+    let orderDate = document.getElementById('invDate').value; 
+    let address = document.getElementById('invAddress').value; 
+    let totalBill = parseFloat(document.getElementById('invTotal').value) || 0; 
+    let disAmt = parseFloat(document.getElementById('invDiscount').value) || 0; 
+    let paidAmt = parseFloat(document.getElementById('invPaid').value) || 0; 
+    let balanceAmt = parseFloat(document.getElementById('invBalance').value) || 0;
+    
+    let orderData = { action: "saveOrder", id: invId, date: orderDate, cust: cust, address: address, total: totalBill, discount: disAmt, paidAmount: paidAmt, balanceAmount: balanceAmt, method: pay, status: "Pending", business: currentBusiness === "SK Crafts" ? "SK Creations" : currentBusiness, items: singleCart };
+    
+    singleCart.forEach(item => { let stockMatch = dataStore[currentBusiness].stock.find(i => i.name === item.name); if(stockMatch) stockMatch.qty -= item.qty; dataStore[currentBusiness].orders.push({ id: invId, date: orderDate, cust: cust, address: address, item: item.name, qty: item.qty, total: item.total, discount: disAmt, paidAmount: paidAmt, balanceAmount: balanceAmt, method: pay, status: "Pending" }); });
+    
+    dispatchToCloud(orderData); let billBox = document.getElementById('invoiceBillBox'); if(billBox) billBox.innerHTML = generatePremiumInvoiceHTML(orderData, currentBusiness);
+    reRenderEntireUI(); singleCart = []; renderSingleCart(); document.getElementById('invCustomer').value = ""; document.getElementById('invPaid').value = "0"; document.getElementById('invBalance').value = "0"; document.getElementById('invDiscount').value = "0"; alert("🎉 Transaction Recorded Successfully!");
+}
+
+function saveRawMaterialLogic(e) {
+    e.preventDefault();
+    let idx = document.getElementById('editingRawIndex').value;
+    let rName = document.getElementById('rName').value.trim();
+    let rQty = parseFloat(document.getElementById('rQty').value);
+    let rUnit = document.getElementById('rUnit').value;
+    let rPrice = parseFloat(document.getElementById('rPrice').value);
+    
+    if (isNaN(rQty) || rQty <= 0 || isNaN(rPrice) || rPrice <= 0) {
+        alert("⚠️ Please enter valid positive numbers for quantity and price.");
+        return;
+    }
+
+    let unitPrice = rPrice / rQty;
+    let cloudBiz = currentBusiness === "SK Crafts" ? "SK Creations" : currentBusiness;
+
+    if (idx === "") {
+        let existingIndex = dataStore[currentBusiness].raw_materials.findIndex(i => i.name.toLowerCase() === rName.toLowerCase());
+        if (existingIndex !== -1) {
+            let existing = dataStore[currentBusiness].raw_materials[existingIndex];
+            let newTotalQty = existing.qty + rQty;
+            let newTotalPrice = (existing.qty * existing.unit_price) + rPrice;
+            existing.qty = newTotalQty;
+            existing.unit_price = newTotalPrice / newTotalQty;
+            dispatchToCloud({ action: "saveRawMaterial", business: cloudBiz, ...existing });
+            alert("🛠️ Existing Material Updated!");
+        } else {
+            let rawObj = { name: rName, qty: rQty, unit: rUnit, unit_price: unitPrice };
+            dataStore[currentBusiness].raw_materials.push(rawObj);
+            dispatchToCloud({ action: "saveRawMaterial", business: cloudBiz, ...rawObj });
+            alert("🛠️ New Raw Material Added!");
+        }
+    } else {
+        let rawObj = { name: rName, qty: rQty, unit: rUnit, unit_price: unitPrice };
+        dataStore[currentBusiness].raw_materials[idx] = rawObj;
+        dispatchToCloud({ action: "saveRawMaterial", business: cloudBiz, ...rawObj });
+        alert("✨ Material Edited!");
+        document.getElementById('editingRawIndex').value = "";
+        document.getElementById('rawFormTitle').textContent = "Add / Update Raw Materials";
+    }
+    document.getElementById('rawActualForm').reset();
+    // දත්ත සේව් වුණාම අනිත් හැම ටැබ් එකකටම පණිවිඩයක් යවනවා
+    localStorage.setItem('db_update', Date.now());
+    reRenderEntireUI();
+}
+
+function triggerRawEdit(index) {
+    let matchedItem = dataStore[currentBusiness].raw_materials[index];
+    document.getElementById('editingRawIndex').value = index;
+    document.getElementById('rName').value = matchedItem.name;
+    document.getElementById('rQty').value = matchedItem.qty;
+    document.getElementById('rUnit').value = matchedItem.unit;
+    document.getElementById('rPrice').value = matchedItem.qty * matchedItem.unit_price;
+    document.getElementById('rawFormTitle').textContent = "✏️ Edit Raw Material";
+}
+
+function triggerRawDelete(index) {
+    if(confirm("❗ Erase raw material?")) {
+        let item = dataStore[currentBusiness].raw_materials[index];
+        let cloudBiz = currentBusiness === "SK Crafts" ? "SK Creations" : currentBusiness;
+        dispatchToCloud({ action: "deleteRawMaterial", name: item.name, business: cloudBiz });
+        dataStore[currentBusiness].raw_materials.splice(index, 1);
+        reRenderEntireUI();
+    }
+}
+
+function renderRawMaterials() {
+    let rBody = document.getElementById('rawTableBody'); if(!rBody) return;
+    rBody.innerHTML = "";
+    let list = dataStore[currentBusiness].raw_materials || [];
+    if(list.length === 0) { rBody.innerHTML = '<tr><td colspan="4" style="text-align:center;">No materials recorded.</td></tr>'; }
+    list.forEach((r, idx) => {
+        rBody.innerHTML += `<tr><td><strong>${r.name}</strong></td><td>${r.qty.toLocaleString()} ${r.unit}</td><td>Rs. ${r.unit_price.toLocaleString('en-US', {minimumFractionDigits: 2})} / unit</td><td><div class="action-btns"><button class="action-btn edit-btn" onclick="triggerRawEdit(${idx})">✏️</button><button class="action-btn delete-btn" onclick="triggerRawDelete(${idx})">❌</button></div></td></tr>`;
+    });
+
+    let bomSel = document.getElementById('bomMatSelect');
+    if(bomSel) {
+        bomSel.innerHTML = "<option value=''>-- Select --</option>";
+        list.forEach(r => { bomSel.innerHTML += `<option value="${r.name}">${r.name} (Rs. ${r.unit_price.toFixed(2)}/${r.unit})</option>`; });
+    }
+}
+
+function addToBomCalculator() {
+    let matName = document.getElementById('bomMatSelect').value;
+    let qtyUsed = parseFloat(document.getElementById('bomQtyUsed').value);
+    if(!matName || !qtyUsed) return;
+    let matMatch = dataStore[currentBusiness].raw_materials.find(r => r.name === matName);
+    if(matMatch) {
+        let cost = qtyUsed * matMatch.unit_price;
+        bomCart.push({ name: matMatch.name, qty: qtyUsed, unit: matMatch.unit, cost: cost });
+        renderBomCalculator();
+    }
+}
+
+function renderBomCalculator() {
+    let bList = document.getElementById('bomList');
+    let bTotal = document.getElementById('bomTotalCost');
+    if(!bList || !bTotal) return;
+    bList.innerHTML = ""; let sum = 0;
+    bomCart.forEach((item, idx) => {
+        sum += item.cost;
+        bList.innerHTML += `<li style="display:flex; justify-content:space-between; margin-bottom:5px;"><span>${item.qty} ${item.unit} x ${item.name}</span><span>Rs. ${item.cost.toFixed(2)}</span></li>`;
+    });
+    bTotal.textContent = "Rs. " + sum.toLocaleString('en-US', {minimumFractionDigits: 2});
+}
+
+function clearBomCalculator() { bomCart = []; renderBomCalculator(); }
+
+function reRenderEntireUI() {
+    let biz = dataStore[currentBusiness];
+    if(!biz) return;
+
+    let activeOrders = biz.orders; let activeExpenses = biz.expenses;
+    if (dashFilterFrom && dashFilterTo) { let fromD = new Date(dashFilterFrom); let toD = new Date(dashFilterTo); toD.setHours(23, 59, 59, 999); activeOrders = activeOrders.filter(o => { let d = new Date(o.date); return d >= fromD && d <= toD; }); activeExpenses = activeExpenses.filter(e => { let d = new Date(e.date); return d >= fromD && d <= toD; }); }
+
+    let totalS = activeOrders.reduce((sum, o) => sum + parseFloat(o.total || 0), 0);
+    let disTotal = activeOrders.reduce((sum, o) => sum + parseFloat(o.discount || 0), 0);
+    totalS = totalS - disTotal;
+    
+    let totalE = activeExpenses.reduce((sum, e) => sum + parseFloat(e.amount || 0), 0);
+    let profit = totalS - totalE;
+
+    let lowStock = biz.stock.filter(s => s.qty < 5).length;
+    document.getElementById('statSales').textContent = "Rs. " + totalS.toLocaleString();
+    document.getElementById('statExpenses').textContent = "Rs. " + totalE.toLocaleString();
+    document.getElementById('statStock').textContent = lowStock;
+    let prEl = document.getElementById('statProfit'); let prCard = document.getElementById('profitCard'); let prLabel = document.getElementById('statProfitLabel');
+    if(prEl) { prEl.textContent = "Rs. " + Math.abs(profit).toLocaleString(); if(profit < 0) { prEl.style.color = "#ff4757"; prEl.style.textShadow = "0 0 15px rgba(255,71,87,0.6)"; prCard.style.borderTopColor = "#ff4757"; prLabel.style.color = "#ff4757"; prLabel.textContent = "Net Loss"; } else { prEl.style.color = "#1dd1a1"; prEl.style.textShadow = "0 0 15px rgba(29,209,161,0.6)"; prCard.style.borderTopColor = "#1dd1a1"; prLabel.style.color = "#1dd1a1"; prLabel.textContent = "Net Profit"; } }
+
+    let tableHTML = "";
+    [...activeOrders].reverse().slice(0, 15).forEach(o => { let sColor = o.status === "Delivered" ? "#2ecc71" : (o.status === "Processing" ? "#3498db" : (o.status === "Ready" ? "#9b59b6" : "#f39c12")); tableHTML += '<tr><td><strong>' + o.id + '</strong></td><td>' + o.date + '</td><td>' + o.cust + '</td><td>' + o.item + '</td><td style="color:var(--gold-primary); font-weight:700;">Rs. ' + o.total + '</td><td style="color:' + sColor + '; font-weight:800;">' + o.status + '</td></tr>'; });
+    let rsTable = document.getElementById('recentSalesTable'); if(rsTable) rsTable.innerHTML = tableHTML;
+
+    let eBody = document.getElementById('expensesTableBody');
+    if(eBody) { eBody.innerHTML = ""; [...activeExpenses].reverse().slice(0, 15).forEach((e, idx) => { let actualIdx = biz.expenses.indexOf(e); eBody.innerHTML += '<tr><td>' + e.date + '</td><td>' + e.desc + '</td><td style="color:#ff4757; font-weight:700;">Rs. ' + e.amount + '</td><td><button onclick="deleteExpense(' + actualIdx + ')" class="action-btn delete-btn">❌</button></td></tr>'; }); }
+
+    let sBody = document.getElementById('stockTableBody');
+    if(sBody) { sBody.innerHTML = ""; biz.stock.forEach((s, idx) => { let statusHTML = s.qty > 5 ? '<span class="status-badge badge-delivered">In Stock</span>' : '<span class="status-badge badge-pending">Low Stock</span>'; sBody.innerHTML += '<tr><td><strong>' + s.name + '</strong></td><td>' + s.qty + '</td><td>Rs. ' + s.price + '</td><td>' + statusHTML + '</td><td><div class="action-btns"><button class="action-btn edit-btn" onclick="triggerStockEdit(' + idx + ')">✏️</button><button class="action-btn delete-btn" onclick="triggerStockDelete(' + idx + ')">❌</button></div></td></tr>'; }); }
+
+    let cBody = document.getElementById('customerTableBody');
+    if(cBody) { cBody.innerHTML = ""; biz.customers.forEach((c, idx) => { cBody.innerHTML += '<tr><td>' + c.id + '</td><td><strong>' + c.name + '</strong></td><td>' + c.phone + '</td><td>' + c.address + '</td><td><div class="action-btns"><button class="action-btn edit-btn" onclick="triggerCustomerEdit(' + idx + ')">✏️</button><button class="action-btn delete-btn" onclick="triggerCustomerDelete(' + idx + ')">❌</button></div></td></tr>'; }); }
+
+    let iCust = document.getElementById('invCustomer'); if(iCust) { iCust.innerHTML = "<option value=''>-- Select Customer --</option>"; biz.customers.forEach(c => { iCust.innerHTML += '<option value="' + c.name + '">' + c.name + '</option>'; }); }
+    let iItem = document.getElementById('invItem'); if(iItem) { iItem.innerHTML = "<option value=''>-- Select Item --</option>"; biz.stock.forEach(s => { iItem.innerHTML += '<option value="' + s.name + '">' + s.name + ' (' + s.qty + ' Left) - Rs. ' + s.price + '</option>'; }); }
+
+    let pfx = currentBusiness === "SK Crafts" ? "SKC" : currentBusiness === "SK Fashion" ? "SKF" : "SKD";
+    let maxInv = 1000; biz.orders.forEach(o => { if (o.id && o.id.toUpperCase().startsWith(pfx + "-")) { let num = parseInt(o.id.split('-')[1]); if (!isNaN(num) && num > maxInv) maxInv = num; } });
+    let invNoEl = document.getElementById('invNo'); if(invNoEl) invNoEl.value = pfx + "-" + (maxInv + 1);
+
+    renderKanbanBoard(activeOrders);
+    renderQuotations();
+    renderDeliveries();
+    renderRawMaterials();
+    renderPayroll();
+    renderPnL();
+    
+    if (activePermissions && activePermissions.users) {
+        renderUserManagementTable(); 
+    }
+
+    let orderDates = {}; let expenseDates = {};
+    activeOrders.forEach(o => { orderDates[o.date] = (orderDates[o.date] || 0) + (parseFloat(o.total) - parseFloat(o.discount||0)); });
+    activeExpenses.forEach(e => { expenseDates[e.date] = (expenseDates[e.date] || 0) + parseFloat(e.amount); });
+    let allDates = Array.from(new Set([...Object.keys(orderDates), ...Object.keys(expenseDates)])).sort();
+    let salesData = allDates.map(d => orderDates[d] || 0); let expData = allDates.map(d => expenseDates[d] || 0);
+
+    let ctx1 = document.getElementById('mainBarChart');
+    if (ctx1) { if (mainBarChartInstance) { mainBarChartInstance.destroy(); } mainBarChartInstance = new Chart(ctx1, { type: 'line', data: { labels: allDates.length > 0 ? allDates : ['No Data'], datasets: [{ label: 'Revenue (Rs)', data: allDates.length > 0 ? salesData : [0], borderColor: '#1dd1a1', backgroundColor: 'rgba(29, 209, 161, 0.1)', borderWidth: 3, fill: true, tension: 0.4 }, { label: 'Expenses (Rs)', data: allDates.length > 0 ? expData : [0], borderColor: '#ff4757', backgroundColor: 'rgba(255, 71, 87, 0.1)', borderWidth: 3, fill: true, tension: 0.4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#fef0c3' } } }, scales: { y: { beginAtZero: true, grid: { color: 'rgba(212, 175, 55, 0.1)' }, ticks: { color: '#fef0c3' } }, x: { grid: { color: 'rgba(212, 175, 55, 0.1)' }, ticks: { color: '#fef0c3' } } } } }); }
+
+    let expCat = {}; activeExpenses.forEach(e => { expCat[e.desc] = (expCat[e.desc] || 0) + parseFloat(e.amount); });
+    let ctx2 = document.getElementById('expensePieChart');
+    if (ctx2) { if (expensePieChartInstance) { expensePieChartInstance.destroy(); } expensePieChartInstance = new Chart(ctx2, { type: 'doughnut', data: { labels: Object.keys(expCat).length > 0 ? Object.keys(expCat) : ['No Expenses'], datasets: [{ data: Object.keys(expCat).length > 0 ? Object.values(expCat) : [1], backgroundColor: ['#ff4757', '#ffa502', '#2ed573', '#1e90ff', '#3742fa', '#ff6b81', '#7bed9f', '#ff7f50'], borderWidth: 0 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: '#fef0c3', font: { size: 11 } } } } } }); }
+    
+    autoFillDeliveryCod();
+    
+    let delInvSelect = document.getElementById('delInvNo');
+    if(delInvSelect) {
+        let currentSelection = delInvSelect.value;
+        delInvSelect.innerHTML = '<option value="">-- Select Order --</option>';
+        activeOrders.forEach(o => {
+            if(o.status === "Ready" || o.status === "Delivered") {
+                delInvSelect.innerHTML += `<option value="${o.id}">${o.id} - ${o.cust} [${o.status}]</option>`;
+            }
+        });
+        if (currentSelection) delInvSelect.value = currentSelection;
+    }
+}
+</script>
+</body>
+</html>
