@@ -1119,11 +1119,11 @@ function generatePremiumInvoiceHTML(order, businessName) {
     return invoiceHtml;
 }
 
+// 2. DOWNLOAD PDF බටන් එක (මේකෙන් කළු පාට ලුක් එක එහෙම්මම එනවා)
 function downloadInvoicePDF(invoiceId) {
     const element = document.getElementById(`printAreaContainer_${invoiceId}`);
-    if (!element) { alert("Error: Invoice matrix container not found."); return; }
+    if (!element) { alert("Error: Container not found."); return; }
 
-    // PDF එක හදද්දී බට්න් ටික තාවකාලිකව හයිඩ් කරනවා
     const printBtns = element.querySelector('.print-btn-class');
     if (printBtns) printBtns.style.display = 'none';
 
@@ -1134,61 +1134,35 @@ function downloadInvoicePDF(invoiceId) {
         html2canvas: { 
             scale: 2, 
             useCORS: true, 
-            letterRendering: true,
-            backgroundColor: '#0a0a0a', // මේක කළු පාටයි (ස්ක්‍රීන් එකේ පේන විදියට)
-            onclone: function (clonedDoc) {
-                let el = clonedDoc.getElementById(`printAreaContainer_${invoiceId}`);
-                if (el) {
-                    el.style.backgroundColor = '#0a0a0a'; // Background එක කළු කරනවා
-                    el.style.color = '#fef0c3';           // අකුරු ගෝල්ඩ් පාටට ගන්නවා
-                    
-                    // හැම එලිමන්ට් එකක්ම කළු පසුබිමක පේන්න හදනවා
-                    let allElements = el.getElementsByTagName('*');
-                    for (let i = 0; i < allElements.length; i++) {
-                        // අපිට ඕනේ ස්ක්‍රීන් එකේ පේන විදියටම නිසා මෙතන පාට වෙනස් කරන්නේ නෑ, 
-                        // ඉබේම CSS එකෙන් එන පාට එන්න දෙනවා.
-                    }
-                }
-            }
+            backgroundColor: '#0a0a0a' // කළු පසුබිමම තියාගන්නවා
         },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
     html2pdf().set(opt).from(element).save().then(() => {
         if (printBtns) printBtns.style.display = 'flex';
-    }).catch(err => {
-        console.error("PDF Generation Trace Error:", err);
-        if (printBtns) printBtns.style.display = 'flex';
     });
 }
+// 1. PRINT/PDF DOCUMENT බටන් එක (මේකෙන් සුදු පසුබිම එනවා)
 function triggerPremiumPrint(invoiceId) {
     let containerEl = document.getElementById(`printAreaContainer_${invoiceId}`); 
     if(!containerEl) return;
     
-    // Add light mode before copying HTML
+    // මේකෙන් Print එකේදී සුදු පාට වෙන්න class එකක් දානවා
     containerEl.classList.add('light-mode');
     let invoiceContent = containerEl.outerHTML; 
-    containerEl.classList.remove('light-mode'); // Revert immediately on screen
+    containerEl.classList.remove('light-mode'); 
     
     let printWindow = window.open('', '_blank', 'height=900,width=900');
-    printWindow.document.write('<html><head><title>' + invoiceId + '</title>'); 
-    printWindow.document.write('<style>'); 
+    printWindow.document.write('<html><head><style>'); 
     printWindow.document.write('@page { size: A4; margin: 10mm; }'); 
-    printWindow.document.write('body { font-family: "Segoe UI", sans-serif; margin: 0; padding: 0; background: #ffffff !important; color: #000000 !important; }'); 
-    printWindow.document.write('.printable-invoice { background-color: #ffffff !important; color: #000000 !important; width: 100%; height: auto; margin: 0 auto; box-shadow: none; border: 1px solid #dddddd !important; padding: 30px !important; display: flex !important; flex-direction: column !important; justify-content: space-between !important; box-sizing: border-box; }'); 
-    printWindow.document.write('.printable-invoice * { background: transparent !important; color: #000000 !important; box-shadow: none !important; text-shadow: none !important; border-color: #aaaaaa !important; }');
+    printWindow.document.write('body { background: #ffffff !important; } .printable-invoice { background-color: #ffffff !important; color: #000000 !important; border: 1px solid #000000 !important; padding: 20px !important; }'); 
+    printWindow.document.write('.printable-invoice *, .printable-invoice td, .printable-invoice th { color: #000000 !important; background: #ffffff !important; }');
     printWindow.document.write('.print-btn-class { display: none !important; }'); 
-    printWindow.document.write('table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }'); 
-    printWindow.document.write('th { background: #f2f2f2 !important; padding: 10px 12px; font-size: 13px; font-weight: 800; border-bottom: 2px solid #000000 !important; color: #000000 !important; text-align: left; }'); 
-    printWindow.document.write('td { padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #eeeeee !important; color: #000000 !important; }'); 
-    printWindow.document.write('</style></head><body>'); 
-    printWindow.document.write(invoiceContent); 
-    printWindow.document.write('</body></html>');
+    printWindow.document.write('</style></head><body>' + invoiceContent + '</body></html>');
     printWindow.document.close(); 
-    printWindow.focus(); 
     setTimeout(function() { printWindow.print(); printWindow.close(); }, 500); 
 }
-
 function exportDataToExcel() {
     let biz = dataStore[currentBusiness]; if(biz.orders.length === 0) { alert("No order records found to export."); return; }
     let csvContent = "data:text/csv;charset=utf-8,Invoice No,Date,Customer,Total Amount (Rs.),Discount (Rs.),Paid (Rs.),Balance (Rs.),Method,Status\n";
