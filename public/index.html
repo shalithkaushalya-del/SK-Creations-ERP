@@ -136,21 +136,6 @@
     box-sizing: border-box; 
 }
 
-/* 2. මේක PDF හදද්දී ලයිට් මෝඩ් එකට මාරු කරන කෑල්ල */
-.printable-invoice.light-mode {
-    background-color: #ffffff !important;
-    color: #000000 !important;
-    border: 1px solid #000000 !important;
-}
-.printable-invoice.light-mode *, 
-.printable-invoice.light-mode h1, 
-.printable-invoice.light-mode h2, 
-.printable-invoice.light-mode td, 
-.printable-invoice.light-mode th {
-    color: #000000 !important;
-    background-color: #ffffff !important;
-    border-color: #cccccc !important;
-}
 
 /* 3. මේක කෙලින්ම Print බොත්තම එබුවම වැඩ කරන කෑල්ල */
 @media print {
@@ -1122,8 +1107,12 @@ function generatePremiumInvoiceHTML(order, businessName) {
 // 2. DOWNLOAD PDF බටන් එක (මේකෙන් කළු පාට ලුක් එක එහෙම්මම එනවා)
 function downloadInvoicePDF(invoiceId) {
     const element = document.getElementById(`printAreaContainer_${invoiceId}`);
-    if (!element) { alert("Error: Container not found."); return; }
+    if (!element) { 
+        alert("Error: Invoice container not found."); 
+        return; 
+    }
 
+    // PDF එක හදද්දී ප්‍රින්ට් බට්න් එක හංගනවා
     const printBtns = element.querySelector('.print-btn-class');
     if (printBtns) printBtns.style.display = 'none';
 
@@ -1134,12 +1123,18 @@ function downloadInvoicePDF(invoiceId) {
         html2canvas: { 
             scale: 2, 
             useCORS: true, 
-            backgroundColor: '#0a0a0a' // කළු පසුබිමම තියාගන්නවා
+            // මෙතන අනිවාර්යයෙන්ම #0a0a0a තියෙන්න ඕනේ, එතකොට තමයි කළු පාට එන්නේ
+            backgroundColor: '#0a0a0a' 
         },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
+    // PDF එක Save කරනවා
     html2pdf().set(opt).from(element).save().then(() => {
+        // වැඩේ ඉවර වුණාම බට්න් එක ආයේ පෙන්නනවා
+        if (printBtns) printBtns.style.display = 'flex';
+    }).catch(err => {
+        console.error("PDF Error:", err);
         if (printBtns) printBtns.style.display = 'flex';
     });
 }
