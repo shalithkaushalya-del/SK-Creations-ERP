@@ -133,6 +133,31 @@
         }
         
         .kb-card { background: rgba(10,15,25,0.9); border: 1px solid rgba(212,175,55,0.2); padding: 15px; border-radius: 10px; margin-bottom: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.4); }
+
+        /* 🔥 PDF & PRINT INK SAVER LIGHT MODE 🔥 */
+        .printable-invoice.light-mode {
+            background-color: #ffffff !important;
+            color: #000000 !important;
+            border: 1px solid #dddddd !important;
+            box-shadow: none !important;
+        }
+        .printable-invoice.light-mode * {
+            color: #000000 !important;
+            background: transparent !important;
+            text-shadow: none !important;
+            border-color: #cccccc !important;
+        }
+        .printable-invoice.light-mode th {
+            background-color: #f2f2f2 !important;
+            color: #000000 !important;
+            border-bottom: 2px solid #000000 !important;
+        }
+        .printable-invoice.light-mode td {
+            border-bottom: 1px solid #eeeeee !important;
+        }
+        .printable-invoice.light-mode .print-btn-class {
+            display: none !important;
+        }
     </style>
 </head>
 <body>
@@ -232,7 +257,6 @@
                     </div>
 
                     <div class="card" style="margin-bottom: 25px; border: 1px solid rgba(212, 175, 55, 0.3);">
-                        <label style="color:var(--gold-primary); font-size:13px; font-weight:700;">Select Search Registry Node:</label>
                         <div style="display: flex; gap: 10px; margin-top: 6px; margin-bottom: 20px; flex-wrap: wrap;">
                             <button type="button" id="searchTab_comb" class="hub-btn active" style="background:var(--gold-primary); color:#111;" onclick="setSearchPrefix('COMB-', this)">✨ SK Creations (All)</button>
                             <button type="button" class="hub-btn" style="background:rgba(212,175,55,0.1);" onclick="setSearchPrefix('SKC-', this)">🎨 SK Crafts</button>
@@ -681,12 +705,11 @@
     <script>
         window.addEventListener('storage', function(e) {
     if (e.key === 'db_update') {
-        // දත්ත වෙනස් වුණා, සර්වර් එකෙන් ආයේ අදින්න
         fetch(WEB_APP_URL)
             .then(res => res.json())
             .then(data => {
-                dataStore = data; // දත්ත අලුත් කරගන්න
-                reRenderEntireUI(); // පේජ් එක Refresh නොකර UI එක අලුත් කරනවා
+                dataStore = data; 
+                reRenderEntireUI(); 
             });
     }
 });
@@ -936,6 +959,52 @@ function getCombinedOrder(orderId) {
     return combinedOrder;
 }
 
+// 🗑️ MD INVOICE DELETE LOGIC 🔥
+function deleteInvoiceLogic(invoiceId) {
+    if (currentRole !== 'MD') {
+        alert("⛔ Access Denied: Only the Managing Director (MD) can permanently delete invoices.");
+        return;
+    }
+    
+    if(!confirm(`⚠️ Are you sure you want to PERMANENTLY DELETE Invoice ${invoiceId}?\n\n(This action cannot be undone. All item quantities will be automatically restored to the warehouse stock).`)) {
+        return;
+    }
+
+    let isComb = invoiceId.startsWith("COMB");
+    let targetBizList = isComb ? ["SK Crafts", "SK Fashion", "SK Digital"] : [currentBusiness];
+    
+    targetBizList.forEach(b => {
+        let itemsToRestore = dataStore[b].orders.filter(o => o.id === invoiceId);
+        
+        // 1. Stock ටික ආපහු එකතු කරනවා
+        itemsToRestore.forEach(itemRow => {
+            let stockMatch = dataStore[b].stock.find(s => s.name === itemRow.item);
+            if (stockMatch) {
+                stockMatch.qty += parseInt(itemRow.qty || 1);
+                dispatchToCloud({ action: "saveStock", business: b, name: stockMatch.name, qty: stockMatch.qty, price: stockMatch.price });
+            }
+        });
+        
+        // 2. Orders ලිස්ට් එකෙන් අයින් කරනවා
+        dataStore[b].orders = dataStore[b].orders.filter(o => o.id !== invoiceId);
+        
+        // 3. Backend එකට පණිවිඩය යවනවා ඩේටාබේස් එකෙන් මකන්න කියලා
+        if (itemsToRestore.length > 0) {
+            dispatchToCloud({ action: "deleteOrder", id: invoiceId, business: b });
+        }
+    });
+
+    alert("🗑️ Invoice Deleted Successfully & Stock Amounts Restored!");
+    
+    let resultBox = document.getElementById('searchResultBox');
+    if(resultBox) resultBox.style.display = "none";
+    document.getElementById('searchInvoiceInput').value = "";
+    
+    localStorage.setItem('db_update', Date.now());
+    reRenderEntireUI();
+}
+
+
 function generatePremiumInvoiceHTML(order, businessName) {
     let isCombined = order.id.startsWith("COMB") || order.id.includes("Q-COMB"); 
     let displayBizName = isCombined ? "SK CREATIONS" : businessName.toUpperCase();
@@ -956,14 +1025,19 @@ function generatePremiumInvoiceHTML(order, businessName) {
 
     let discountHtmlRow = ""; if(orderDiscount > 0) { discountHtmlRow = `<div style="display: flex; justify-content: space-between; font-size: 14px; color: #e74c3c; padding-bottom: 8px; border-bottom: 1px dashed rgba(212, 175, 55, 0.2); font-weight: 600;"><span>Discount / Offers:</span><span style="font-weight: 700;">- Rs. ${orderDiscount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span></div>`; }
 
-    let whatsappActionBtn = isCombined ? `<button onclick="sendCombinedWhatsAppInvoice('${order.id}')" class="btn" style="width: auto; padding: 12px 30px; font-size: 14px; background: #25D366; color: #111; border-radius: 8px; font-weight: 800; border: none; cursor: pointer; box-shadow: 0 4px 15px rgba(37,211,102,0.3);">💬 Send WhatsApp Bill</button>` : `<button onclick="sendWhatsAppInvoice('${order.id}', '${businessName}')" class="btn" style="width: auto; padding: 12px 30px; font-size: 14px; background: #25D366; color: #111; border-radius: 8px; font-weight: 800; border: none; cursor: pointer; box-shadow: 0 4px 15px rgba(37,211,102,0.3);">💬 Send WhatsApp</button>`;
+    let whatsappActionBtn = isCombined ? `<button onclick="sendCombinedWhatsAppInvoice('${order.id}')" class="btn" style="width: auto; padding: 12px 20px; font-size: 14px; background: #25D366; color: #111; border-radius: 8px; font-weight: 800; border: none; cursor: pointer; box-shadow: 0 4px 15px rgba(37,211,102,0.3);">💬 WhatsApp</button>` : `<button onclick="sendWhatsAppInvoice('${order.id}', '${businessName}')" class="btn" style="width: auto; padding: 12px 20px; font-size: 14px; background: #25D366; color: #111; border-radius: 8px; font-weight: 800; border: none; cursor: pointer; box-shadow: 0 4px 15px rgba(37,211,102,0.3);">💬 WhatsApp</button>`;
     if(order.isQuotation) whatsappActionBtn = ''; 
+
+    // MD කෙනෙක් ලොග් වෙලා නම් විතරක් Delete Button එක පෙන්නනවා
+    let adminActionBtn = '';
+    if (currentRole === 'MD') {
+        adminActionBtn = `<button onclick="deleteInvoiceLogic('${order.id}')" class="btn" style="width: auto; padding: 12px 20px; font-size: 14px; background: #e74c3c; color: #fff; border-radius: 8px; font-weight: 800; border: none; cursor: pointer; box-shadow: 0 4px 15px rgba(231,76,60,0.3);">🗑️ Delete Invoice</button>`;
+    }
 
     let thPrice = order.isQuotation ? "UNIT RATE" : "UNIT PRICE";
     let thQty = order.isQuotation ? "ORDER QTY" : "QTY";
 
-    // CSS Variables අයින් කරලා කෙලින්ම Hex Colors දුන්නා
-    let invoiceHtml = `<div id="printAreaContainer_${order.id}" class="printable-invoice" style="background-color: #0a0a0a; color: #fef0c3; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
+    let invoiceHtml = `<div id="printAreaContainer_${order.id}" class="printable-invoice">
         <div>
             <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #d4af37; padding-bottom: 25px; margin-bottom: 35px;">
                 <div>
@@ -1012,10 +1086,11 @@ function generatePremiumInvoiceHTML(order, businessName) {
                 <p style="font-size: 13px; font-weight: 700; color: #d4af37; margin: 0;">Thank you for your business!</p>
                 <p style="font-size: 11px; color: rgba(212, 175, 55, 0.6); margin-top: 4px; font-weight: 500;">This is a system generated official commercial invoice receipt.</p>
             </div>
-            <div class="print-btn-class" style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px;">
+            <div class="print-btn-class" style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap;">
                 ${whatsappActionBtn}
-                <button onclick="triggerPremiumPrint('${order.id}')" class="btn" style="width: auto; padding: 12px 30px; font-size: 14px; background: #d4af37; color: #111; border-radius: 8px; font-weight: 800; border: none; cursor: pointer;">🖨️ PDF / Print Document</button>
-                <button onclick="downloadInvoicePDF('${order.id}')" class="btn" style="width: auto; padding: 12px 30px; font-size: 14px; background:#f1c40f; color:#111; border-radius: 8px; font-weight: 800; border: none; cursor: pointer;">📥 Download PDF</button>
+                ${adminActionBtn}
+                <button onclick="triggerPremiumPrint('${order.id}')" class="btn" style="width: auto; padding: 12px 20px; font-size: 14px; background: #d4af37; color: #111; border-radius: 8px; font-weight: 800; border: none; cursor: pointer;">🖨️ PDF / Print</button>
+                <button onclick="downloadInvoicePDF('${order.id}')" class="btn" style="width: auto; padding: 12px 20px; font-size: 14px; background:#f1c40f; color:#111; border-radius: 8px; font-weight: 800; border: none; cursor: pointer;">📥 Download PDF</button>
             </div>
         </div>
     </div>`;
@@ -1030,62 +1105,62 @@ function generatePremiumInvoiceHTML(order, businessName) {
     return invoiceHtml;
 }
 
+// 🖨️ PDF & PRINT FIX - FORCES WHITE BACKGROUND
 function downloadInvoicePDF(invoiceId) {
-    // අදාළ ඉන්වොයිස් අංකයට අයිති Unique DIV එක විතරක් තෝරගන්නවා
     const element = document.getElementById(`printAreaContainer_${invoiceId}`);
-    
-    if (!element) {
-        alert("Error: Invoice matrix container not found inside DOM buffer.");
-        return;
-    }
+    if (!element) { alert("Error: Invoice matrix container not found."); return; }
 
-    // PDF එක හදද්දී බට්න් ටික තාවකාලිකව හයිඩ් කරනවා
-    const printBtns = element.querySelector('.print-btn-class');
-    if (printBtns) printBtns.style.display = 'none';
+    // Add Light Mode class to force #ffffff background temporarily
+    element.classList.add('light-mode');
 
     var opt = {
-        margin: 5,
+        margin: 8,
         filename: `${invoiceId}_Invoice.pdf`,
-        image: { type: 'jpeg', quality: 1 },
+        image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { 
             scale: 2, 
             useCORS: true, 
             letterRendering: true,
-            backgroundColor: '#0a0a0a' 
+            backgroundColor: '#ffffff' // 100% White
         },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
-    // සාර්ථකව PDF එකක් ජෙනරේට් කරනවා
     html2pdf().set(opt).from(element).save().then(() => {
-        // වැඩේ ඉවර වුණාම බට්න් ටික ආයෙත් පේන්න සෙට් කරනවා
-        if (printBtns) printBtns.style.display = 'flex';
+        // Remove Light Mode class after PDF is generated
+        element.classList.remove('light-mode');
+    }).catch(err => {
+        element.classList.remove('light-mode');
+        console.error("PDF Generation Trace Error:", err);
     });
 }
 
 function triggerPremiumPrint(invoiceId) {
-    // මෙතනත් අපි Unique ID එකෙන්ම DIV එක අල්ලනවා
     let containerEl = document.getElementById(`printAreaContainer_${invoiceId}`); 
-    if(!containerEl) { alert("Error: Invoice matrix buffer empty."); return; }
+    if(!containerEl) return;
     
+    // Add light mode before copying HTML
+    containerEl.classList.add('light-mode');
     let invoiceContent = containerEl.outerHTML; 
+    containerEl.classList.remove('light-mode'); // Revert immediately on screen
+    
     let printWindow = window.open('', '_blank', 'height=900,width=900');
     printWindow.document.write('<html><head><title>' + invoiceId + '</title>'); 
     printWindow.document.write('<style>'); 
     printWindow.document.write('@page { size: A4; margin: 10mm; }'); 
-    printWindow.document.write(':root { --gold-primary: #d4af37; --gold-light: #fef0c3; }'); 
-    printWindow.document.write('body { font-family: "Segoe UI", sans-serif; margin: 0; padding: 0; background-color: #0a0a0a !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }'); 
-    printWindow.document.write('.printable-invoice { background-color: #0a0a0a !important; color: var(--gold-light) !important; width: 100%; height: 270mm; margin: 0 auto; box-shadow: none; border: 1px solid rgba(212, 175, 55, 0.4) !important; padding: 30px !important; display: flex !important; flex-direction: column !important; justify-content: space-between !important; box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; page-break-inside: avoid; overflow: hidden; }'); 
+    printWindow.document.write('body { font-family: "Segoe UI", sans-serif; margin: 0; padding: 0; background: #ffffff !important; color: #000000 !important; }'); 
+    printWindow.document.write('.printable-invoice { background-color: #ffffff !important; color: #000000 !important; width: 100%; height: auto; margin: 0 auto; box-shadow: none; border: 1px solid #dddddd !important; padding: 30px !important; display: flex !important; flex-direction: column !important; justify-content: space-between !important; box-sizing: border-box; }'); 
+    printWindow.document.write('.printable-invoice * { background: transparent !important; color: #000000 !important; box-shadow: none !important; text-shadow: none !important; border-color: #aaaaaa !important; }');
     printWindow.document.write('.print-btn-class { display: none !important; }'); 
     printWindow.document.write('table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }'); 
-    printWindow.document.write('th { background: rgba(212, 175, 55, 0.15) !important; padding: 10px 12px; font-size: 13px; font-weight: 800; border-bottom: 2px solid var(--gold-primary); color: var(--gold-primary); text-align: left; }'); 
-    printWindow.document.write('td { padding: 10px 12px; font-size: 14px; border-bottom: 1px solid rgba(212, 175, 55, 0.2); color: var(--gold-light); }'); 
+    printWindow.document.write('th { background: #f2f2f2 !important; padding: 10px 12px; font-size: 13px; font-weight: 800; border-bottom: 2px solid #000000 !important; color: #000000 !important; text-align: left; }'); 
+    printWindow.document.write('td { padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #eeeeee !important; color: #000000 !important; }'); 
     printWindow.document.write('</style></head><body>'); 
     printWindow.document.write(invoiceContent); 
     printWindow.document.write('</body></html>');
     printWindow.document.close(); 
     printWindow.focus(); 
-    setTimeout(function() { printWindow.print(); printWindow.close(); }, 800); 
+    setTimeout(function() { printWindow.print(); printWindow.close(); }, 500); 
 }
 
 function exportDataToExcel() {
@@ -1098,7 +1173,7 @@ function exportDataToExcel() {
 }
 
 function exportExpensesToExcel() {
-    let biz = dataStore[currentBusiness]; if(biz.expenses.length === 0) { alert("No expense records found to export."); return; }
+    let biz = dataStore[currentBusiness]; if(biz.expenses.length === 0) { alert("No order records found to export."); return; }
     let csvContent = "data:text/csv;charset=utf-8,Date,Expense Description,Amount (Rs.)\n"; let activeExpenses = biz.expenses;
     if (dashFilterFrom && dashFilterTo) { let fromDate = new Date(dashFilterFrom); let toDate = new Date(dashFilterTo); toDate.setHours(23, 59, 59, 999); activeExpenses = activeExpenses.filter(e => { let d = new Date(e.date); return d >= fromDate && d <= toDate; }); }
     let totalExp = 0; activeExpenses.forEach(e => { let row = `${e.date},"${e.desc}",${e.amount}`; csvContent += row + "\n"; totalExp += parseFloat(e.amount); }); csvContent += `\n"","TOTAL EXPENSES",${totalExp}\n`;
@@ -1292,7 +1367,7 @@ function triggerUserEdit(index) {
     
     document.getElementById('pSales').checked = permsObj.sales || false; 
     document.getElementById('pWorkflow').checked = permsObj.workflow !== undefined ? permsObj.workflow : (permsObj.sales || false);
-    document.getElementById('pQuotations').checked = permsObj.quotation !== undefined ? permsObj.quotation : (permsObj.sales || false);
+    document.getElementById('pQuotations').checked = permsObj.quotations !== undefined ? permsObj.quotations : (permsObj.sales || false);
     document.getElementById('pDelivery').checked = permsObj.delivery !== undefined ? permsObj.delivery : (permsObj.sales || false);
     document.getElementById('pBom').checked = permsObj.bom !== undefined ? permsObj.bom : (permsObj.stock || false);
     document.getElementById('pStock').checked = permsObj.stock || false; 
@@ -1844,7 +1919,6 @@ function saveStockItemLogic(e) {
         cancelStockEditState(); 
     } 
     document.getElementById('stockActualForm').reset(); 
-    // දත්ත සේව් වුණාම අනිත් හැම ටැබ් එකකටම පණිවිඩයක් යවනවා
     localStorage.setItem('db_update', Date.now());
     reRenderEntireUI(); 
 }
@@ -1892,7 +1966,6 @@ function saveCustomerProfileLogic(e) {
         cancelCustomerEditState(); 
     } 
     document.getElementById('customerActualForm').reset(); 
-    // දත්ත සේව් වුණාම අනිත් හැම ටැබ් එකකටම පණිවිඩයක් යවනවා
     localStorage.setItem('db_update', Date.now());
     reRenderEntireUI(); 
 }
@@ -2022,7 +2095,6 @@ function saveRawMaterialLogic(e) {
         document.getElementById('rawFormTitle').textContent = "Add / Update Raw Materials";
     }
     document.getElementById('rawActualForm').reset();
-    // දත්ත සේව් වුණාම අනිත් හැම ටැබ් එකකටම පණිවිඩයක් යවනවා
     localStorage.setItem('db_update', Date.now());
     reRenderEntireUI();
 }
