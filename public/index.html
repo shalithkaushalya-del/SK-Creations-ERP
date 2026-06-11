@@ -1105,13 +1105,14 @@ function generatePremiumInvoiceHTML(order, businessName) {
     return invoiceHtml;
 }
 
-// 🖨️ PDF & PRINT FIX - FORCES WHITE BACKGROUND
+// 🔥 PDF DOWNLAOD FIX - KEEPS THE PREMIUM DARK THEME 🔥
 function downloadInvoicePDF(invoiceId) {
     const element = document.getElementById(`printAreaContainer_${invoiceId}`);
     if (!element) { alert("Error: Invoice matrix container not found."); return; }
 
-    // Add Light Mode class to force #ffffff background temporarily
-    element.classList.add('light-mode');
+    // PDF එක හදද්දී බට්න් ටික තාවකාලිකව හයිඩ් කරනවා
+    const printBtns = element.querySelector('.print-btn-class');
+    if (printBtns) printBtns.style.display = 'none';
 
     var opt = {
         margin: 8,
@@ -1121,17 +1122,18 @@ function downloadInvoicePDF(invoiceId) {
             scale: 2, 
             useCORS: true, 
             letterRendering: true,
-            backgroundColor: '#ffffff' // 100% White
+            backgroundColor: '#0a0a0a' // කළු පසුබිම එහෙම්මම තියාගන්නවා
         },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
+    // Delay එකක් නැතුව කෙලින්ම Dark Theme එකෙන් PDF එක ගන්නවා
     html2pdf().set(opt).from(element).save().then(() => {
-        // Remove Light Mode class after PDF is generated
-        element.classList.remove('light-mode');
+        // වැඩේ ඉවර වුණාම බට්න් ටික ආයෙත් පේන්න සෙට් කරනවා
+        if (printBtns) printBtns.style.display = 'flex';
     }).catch(err => {
-        element.classList.remove('light-mode');
         console.error("PDF Generation Trace Error:", err);
+        if (printBtns) printBtns.style.display = 'flex';
     });
 }
 
