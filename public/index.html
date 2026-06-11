@@ -1119,8 +1119,6 @@ function generatePremiumInvoiceHTML(order, businessName) {
     return invoiceHtml;
 }
 
-// 🔥 PDF DOWNLAOD FIX - KEEPS THE PREMIUM DARK THEME 🔥
-// 🔥 PDF DOWNLOAD FIX - WITH CLEAN STYLE OVERRIDE 🔥
 function downloadInvoicePDF(invoiceId) {
     const element = document.getElementById(`printAreaContainer_${invoiceId}`);
     if (!element) { alert("Error: Invoice matrix container not found."); return; }
@@ -1129,33 +1127,30 @@ function downloadInvoicePDF(invoiceId) {
     const printBtns = element.querySelector('.print-btn-class');
     if (printBtns) printBtns.style.display = 'none';
 
-    // PDF එකේ ලුක් එක ස්ක්‍රීන් එකේ පේන විදියටම Force කරනවා
-    element.style.backgroundColor = '#0a0a0a';
-    element.style.color = '#fef0c3';
-
     var opt = {
         margin: 5,
         filename: `${invoiceId}_Invoice.pdf`,
         image: { type: 'jpeg', quality: 1 },
         html2canvas: { 
-                scale: 2, 
-                useCORS: true, 
-                letterRendering: true,
-                backgroundColor: '#ffffff', // පසුබිම සුදු කරන්න
-                onclone: function (clonedDoc) {
-                    let element = clonedDoc.getElementById(`printAreaContainer_${invoiceId}`);
-                    if (element) {
-                        element.style.backgroundColor = '#ffffff';
-                        element.style.color = '#000000';
-                        // අකුරු කළු පාටට බලෙන්ම මාරු කරනවා
-                        let allElements = element.getElementsByTagName('*');
-                        for (let i = 0; i < allElements.length; i++) {
-                            allElements[i].style.color = '#000000';
-                            allElements[i].style.backgroundColor = '#ffffff';
-                        }
+            scale: 2, 
+            useCORS: true, 
+            letterRendering: true,
+            backgroundColor: '#0a0a0a', // මේක කළු පාටයි (ස්ක්‍රීන් එකේ පේන විදියට)
+            onclone: function (clonedDoc) {
+                let el = clonedDoc.getElementById(`printAreaContainer_${invoiceId}`);
+                if (el) {
+                    el.style.backgroundColor = '#0a0a0a'; // Background එක කළු කරනවා
+                    el.style.color = '#fef0c3';           // අකුරු ගෝල්ඩ් පාටට ගන්නවා
+                    
+                    // හැම එලිමන්ට් එකක්ම කළු පසුබිමක පේන්න හදනවා
+                    let allElements = el.getElementsByTagName('*');
+                    for (let i = 0; i < allElements.length; i++) {
+                        // අපිට ඕනේ ස්ක්‍රීන් එකේ පේන විදියටම නිසා මෙතන පාට වෙනස් කරන්නේ නෑ, 
+                        // ඉබේම CSS එකෙන් එන පාට එන්න දෙනවා.
                     }
                 }
-            },
+            }
+        },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
@@ -1166,7 +1161,6 @@ function downloadInvoicePDF(invoiceId) {
         if (printBtns) printBtns.style.display = 'flex';
     });
 }
-
 function triggerPremiumPrint(invoiceId) {
     let containerEl = document.getElementById(`printAreaContainer_${invoiceId}`); 
     if(!containerEl) return;
