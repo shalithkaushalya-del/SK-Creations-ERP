@@ -131,6 +131,37 @@
             padding: 40px; border-radius: 12px; border: 1px solid rgba(212, 175, 55, 0.4); box-shadow: 0 10px 30px rgba(0,0,0,0.8);
             width: 100%; max-width: 210mm; min-height: 800px; margin: 0 auto; display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important;
         }
+
+        /* PDF එකේදී ලයිට් මෝඩ් එකට මාරු වෙන්න */
+        .printable-invoice.light-mode {
+            background-color: #ffffff !important;
+            color: #000000 !important;
+            border: 1px solid #000000 !important;
+        }
+        .printable-invoice.light-mode *, 
+        .printable-invoice.light-mode h1, .printable-invoice.light-mode h2, 
+        .printable-invoice.light-mode td, .printable-invoice.light-mode th {
+            color: #000000 !important;
+            background-color: #ffffff !important;
+            border-color: #000000 !important;
+        }
+
+        @media print {
+            .printable-invoice {
+                background-color: #ffffff !important; 
+                color: #000000 !important;
+                border: 1px solid #000000 !important;
+            }
+            .printable-invoice *, 
+            .printable-invoice h1, .printable-invoice h2, 
+            .printable-invoice th, .printable-invoice td {
+                color: #000000 !important;
+                background-color: #ffffff !important;
+            }
+            .print-btn-class {
+                display: none !important;
+            }
+        }
         
         .kb-card { background: rgba(10,15,25,0.9); border: 1px solid rgba(212,175,55,0.2); padding: 15px; border-radius: 10px; margin-bottom: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.4); }
 
