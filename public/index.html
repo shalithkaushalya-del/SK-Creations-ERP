@@ -125,34 +125,30 @@
         th, td { padding: 14px; border-bottom: 1px solid rgba(212, 175, 55, 0.2); font-size: 14px; color: var(--gold-light); }
         th { background: rgba(212, 175, 55, 0.1); color: var(--gold-primary); font-weight: 800; text-transform: uppercase; font-size: 13px; }
 
-        /* 1. මේක තමයි ප්‍රධාන ස්ටයිල් එක */
+   /* ප්‍රධාන ස්ටයිල් එක (කළු පාට - screen එකේ පේන විදියට) */
 .printable-invoice {
     background-color: #0a0a0a !important;
     color: #fef0c3 !important;
     padding: 40px; border-radius: 12px; border: 1px solid rgba(212, 175, 55, 0.4); 
     box-shadow: 0 10px 30px rgba(0,0,0,0.8);
-    width: 100%; max-width: 210mm; min-height: 800px; margin: 0 auto; 
-    display: flex; flex-direction: column; justify-content: space-between; 
-    box-sizing: border-box; 
+    width: 100%; max-width: 210mm; margin: 0 auto;
 }
 
-/* 2. මේක PDF හදද්දී ලයිට් මෝඩ් එකට මාරු කරන කෑල්ල */
-.printable-invoice.light-mode {
+/* PDF Download කරද්දී සුදු පාට වෙන්න මේ class එක පාවිච්චි කරමු */
+.pdf-light-mode {
     background-color: #ffffff !important;
     color: #000000 !important;
     border: 1px solid #000000 !important;
 }
-.printable-invoice.light-mode *, 
-.printable-invoice.light-mode h1, 
-.printable-invoice.light-mode h2, 
-.printable-invoice.light-mode td, 
-.printable-invoice.light-mode th {
+.pdf-light-mode *, 
+.pdf-light-mode h1, .pdf-light-mode h2, 
+.pdf-light-mode th, .pdf-light-mode td {
     color: #000000 !important;
     background-color: #ffffff !important;
-    border-color: #cccccc !important;
+    border-color: #000000 !important;
 }
 
-/* 3. මේක කෙලින්ම Print බොත්තම එබුවම වැඩ කරන කෑල්ල */
+/* Print කරද්දී විතරක් වැඩ කරන කොටස */
 @media print {
     body { background: #ffffff !important; }
     .printable-invoice {
@@ -161,16 +157,12 @@
         border: 1px solid #000000 !important;
     }
     .printable-invoice *, 
-    .printable-invoice h1, .printable-invoice h2, 
     .printable-invoice th, .printable-invoice td {
         color: #000000 !important;
         background-color: #ffffff !important;
         border-color: #000000 !important;
     }
-    /* ප්‍රින්ට් වෙද්දී බටන්ස් අයින් කරන්න */
-    .print-btn-class, button, .biz-hub, .sidebar, .nav-btn {
-        display: none !important;
-    }
+    .print-btn-class { display: none !important; }
 }
     </style>
 </head>
@@ -1119,13 +1111,14 @@ function generatePremiumInvoiceHTML(order, businessName) {
     return invoiceHtml;
 }
 
-// 2. DOWNLOAD PDF බටන් එක (මේකෙන් කළු පාට ලුක් එක එහෙම්මම එනවා)
+// 2. DOWNLOAD PDF (කළු/ගෝල්ඩ්) - ස්ක්‍රීන් එකේ පේන විදියටම එනවා
 function downloadInvoicePDF(invoiceId) {
     const element = document.getElementById(`printAreaContainer_${invoiceId}`);
-    if (!element) { alert("Error: Container not found."); return; }
+    if (!element) return;
 
-    const printBtns = element.querySelector('.print-btn-class');
-    if (printBtns) printBtns.style.display = 'none';
+    // Button එක හංගනවා
+    const btn = element.querySelector('.print-btn-class');
+    if(btn) btn.style.display = 'none';
 
     var opt = {
         margin: 5,
@@ -1134,34 +1127,18 @@ function downloadInvoicePDF(invoiceId) {
         html2canvas: { 
             scale: 2, 
             useCORS: true, 
-            backgroundColor: '#0a0a0a' // කළු පසුබිමම තියාගන්නවා
+            backgroundColor: '#0a0a0a' // කළු පසුබිමමයි
         },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
     html2pdf().set(opt).from(element).save().then(() => {
-        if (printBtns) printBtns.style.display = 'flex';
+        if(btn) btn.style.display = 'flex';
     });
 }
-// 1. PRINT/PDF DOCUMENT බටන් එක (මේකෙන් සුදු පසුබිම එනවා)
+// 1. PRINT/PDF DOCUMENT (සුදු/කළු) - බ්‍රවුසරේ තියෙන Print Dialog එක එනවා
 function triggerPremiumPrint(invoiceId) {
-    let containerEl = document.getElementById(`printAreaContainer_${invoiceId}`); 
-    if(!containerEl) return;
-    
-    // මේකෙන් Print එකේදී සුදු පාට වෙන්න class එකක් දානවා
-    containerEl.classList.add('light-mode');
-    let invoiceContent = containerEl.outerHTML; 
-    containerEl.classList.remove('light-mode'); 
-    
-    let printWindow = window.open('', '_blank', 'height=900,width=900');
-    printWindow.document.write('<html><head><style>'); 
-    printWindow.document.write('@page { size: A4; margin: 10mm; }'); 
-    printWindow.document.write('body { background: #ffffff !important; } .printable-invoice { background-color: #ffffff !important; color: #000000 !important; border: 1px solid #000000 !important; padding: 20px !important; }'); 
-    printWindow.document.write('.printable-invoice *, .printable-invoice td, .printable-invoice th { color: #000000 !important; background: #ffffff !important; }');
-    printWindow.document.write('.print-btn-class { display: none !important; }'); 
-    printWindow.document.write('</style></head><body>' + invoiceContent + '</body></html>');
-    printWindow.document.close(); 
-    setTimeout(function() { printWindow.print(); printWindow.close(); }, 500); 
+    window.print(); 
 }
 function exportDataToExcel() {
     let biz = dataStore[currentBusiness]; if(biz.orders.length === 0) { alert("No order records found to export."); return; }
