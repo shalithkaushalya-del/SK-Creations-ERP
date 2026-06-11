@@ -125,70 +125,53 @@
         th, td { padding: 14px; border-bottom: 1px solid rgba(212, 175, 55, 0.2); font-size: 14px; color: var(--gold-light); }
         th { background: rgba(212, 175, 55, 0.1); color: var(--gold-primary); font-weight: 800; text-transform: uppercase; font-size: 13px; }
 
-        .printable-invoice {
-            background-color: #0a0a0a !important;
-            color: var(--gold-light) !important;
-            padding: 40px; border-radius: 12px; border: 1px solid rgba(212, 175, 55, 0.4); box-shadow: 0 10px 30px rgba(0,0,0,0.8);
-            width: 100%; max-width: 210mm; min-height: 800px; margin: 0 auto; display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important;
-        }
+        /* 1. මේක තමයි ප්‍රධාන ස්ටයිල් එක */
+.printable-invoice {
+    background-color: #0a0a0a !important;
+    color: #fef0c3 !important;
+    padding: 40px; border-radius: 12px; border: 1px solid rgba(212, 175, 55, 0.4); 
+    box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+    width: 100%; max-width: 210mm; min-height: 800px; margin: 0 auto; 
+    display: flex; flex-direction: column; justify-content: space-between; 
+    box-sizing: border-box; 
+}
 
-        /* PDF එකේදී ලයිට් මෝඩ් එකට මාරු වෙන්න */
-        .printable-invoice.light-mode {
-            background-color: #ffffff !important;
-            color: #000000 !important;
-            border: 1px solid #000000 !important;
-        }
-        .printable-invoice.light-mode *, 
-        .printable-invoice.light-mode h1, .printable-invoice.light-mode h2, 
-        .printable-invoice.light-mode td, .printable-invoice.light-mode th {
-            color: #000000 !important;
-            background-color: #ffffff !important;
-            border-color: #000000 !important;
-        }
+/* 2. මේක PDF හදද්දී ලයිට් මෝඩ් එකට මාරු කරන කෑල්ල */
+.printable-invoice.light-mode {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    border: 1px solid #000000 !important;
+}
+.printable-invoice.light-mode *, 
+.printable-invoice.light-mode h1, 
+.printable-invoice.light-mode h2, 
+.printable-invoice.light-mode td, 
+.printable-invoice.light-mode th {
+    color: #000000 !important;
+    background-color: #ffffff !important;
+    border-color: #cccccc !important;
+}
 
-        @media print {
-            .printable-invoice {
-                background-color: #ffffff !important; 
-                color: #000000 !important;
-                border: 1px solid #000000 !important;
-            }
-            .printable-invoice *, 
-            .printable-invoice h1, .printable-invoice h2, 
-            .printable-invoice th, .printable-invoice td {
-                color: #000000 !important;
-                background-color: #ffffff !important;
-            }
-            .print-btn-class {
-                display: none !important;
-            }
-        }
-        
-        .kb-card { background: rgba(10,15,25,0.9); border: 1px solid rgba(212,175,55,0.2); padding: 15px; border-radius: 10px; margin-bottom: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.4); }
-
-        /* 🔥 PDF & PRINT INK SAVER LIGHT MODE 🔥 */
-        .printable-invoice.light-mode {
-            background-color: #ffffff !important;
-            color: #000000 !important;
-            border: 1px solid #dddddd !important;
-            box-shadow: none !important;
-        }
-        .printable-invoice.light-mode * {
-            color: #000000 !important;
-            background: transparent !important;
-            text-shadow: none !important;
-            border-color: #cccccc !important;
-        }
-        .printable-invoice.light-mode th {
-            background-color: #f2f2f2 !important;
-            color: #000000 !important;
-            border-bottom: 2px solid #000000 !important;
-        }
-        .printable-invoice.light-mode td {
-            border-bottom: 1px solid #eeeeee !important;
-        }
-        .printable-invoice.light-mode .print-btn-class {
-            display: none !important;
-        }
+/* 3. මේක කෙලින්ම Print බොත්තම එබුවම වැඩ කරන කෑල්ල */
+@media print {
+    body { background: #ffffff !important; }
+    .printable-invoice {
+        background-color: #ffffff !important; 
+        color: #000000 !important;
+        border: 1px solid #000000 !important;
+    }
+    .printable-invoice *, 
+    .printable-invoice h1, .printable-invoice h2, 
+    .printable-invoice th, .printable-invoice td {
+        color: #000000 !important;
+        background-color: #ffffff !important;
+        border-color: #000000 !important;
+    }
+    /* ප්‍රින්ට් වෙද්දී බටන්ස් අයින් කරන්න */
+    .print-btn-class, button, .biz-hub, .sidebar, .nav-btn {
+        display: none !important;
+    }
+}
     </style>
 </head>
 <body>
@@ -1155,18 +1138,24 @@ function downloadInvoicePDF(invoiceId) {
         filename: `${invoiceId}_Invoice.pdf`,
         image: { type: 'jpeg', quality: 1 },
         html2canvas: { 
-            scale: 2, 
-            useCORS: true, 
-            letterRendering: true,
-            backgroundColor: '#0a0a0a', // කළු පාටමයි
-            onclone: (clonedDoc) => {
-                let el = clonedDoc.getElementById(`printAreaContainer_${invoiceId}`);
-                if(el) {
-                    el.style.color = '#fef0c3';
-                    el.style.backgroundColor = '#0a0a0a';
+                scale: 2, 
+                useCORS: true, 
+                letterRendering: true,
+                backgroundColor: '#ffffff', // පසුබිම සුදු කරන්න
+                onclone: function (clonedDoc) {
+                    let element = clonedDoc.getElementById(`printAreaContainer_${invoiceId}`);
+                    if (element) {
+                        element.style.backgroundColor = '#ffffff';
+                        element.style.color = '#000000';
+                        // අකුරු කළු පාටට බලෙන්ම මාරු කරනවා
+                        let allElements = element.getElementsByTagName('*');
+                        for (let i = 0; i < allElements.length; i++) {
+                            allElements[i].style.color = '#000000';
+                            allElements[i].style.backgroundColor = '#ffffff';
+                        }
+                    }
                 }
-            }
-        },
+            },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
