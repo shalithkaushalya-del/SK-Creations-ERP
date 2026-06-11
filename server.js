@@ -94,6 +94,13 @@ app.post('/api/sync', async (req, res) => {
         else if (data.action === 'updateOrderStatus') {
             await db.query(`UPDATE orders SET status = $1 WHERE invoice_no = $2 AND branch = $3`, [data.status, data.id, data.business]);
         } 
+        else if (data.action === 'updateOrderStatus') {
+            await db.query(`UPDATE orders SET status = $1 WHERE invoice_no = $2 AND branch = $3`, [data.status, data.id, data.business]);
+        } 
+        // 👇 මෙන්න මේ අලුත් කෑල්ල පේස්ට් කරන්න 👇
+        else if (data.action === 'deleteOrder') {
+            await db.query(`DELETE FROM orders WHERE invoice_no = $1 AND branch = $2`, [data.id, data.business]);
+        }
         else if (data.action === 'saveStock') {
             await db.query(`INSERT INTO inventory (item_name, qty, price, branch) VALUES ($1, $2, $3, $4) ON CONFLICT (item_name, branch) DO UPDATE SET qty = EXCLUDED.qty, price = EXCLUDED.price`, 
             [data.name, data.qty, data.price, data.business]);
