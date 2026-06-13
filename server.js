@@ -37,6 +37,9 @@ db.connect()
           await db.query(`CREATE TABLE IF NOT EXISTS raw_materials (id SERIAL PRIMARY KEY, name TEXT, qty REAL, unit TEXT, unit_price REAL, branch TEXT, UNIQUE(name, branch))`);
           await db.query(`CREATE TABLE IF NOT EXISTS payroll (id SERIAL PRIMARY KEY, date TEXT, name TEXT, type TEXT, amount REAL, branch TEXT)`);
           
+          // 🔥 අලුත් Web Orders Table එක 🔥
+          await db.query(`CREATE TABLE IF NOT EXISTS web_orders (id SERIAL PRIMARY KEY, order_no TEXT, date TEXT, customer_name TEXT, phone TEXT, address TEXT, total_amount REAL, items TEXT, status TEXT)`);
+          
           console.log("✅ All Advanced PostgreSQL Tables Ready!");
       } catch (err) {
           console.error("❌ Table Creation Error:", err.message);
@@ -57,7 +60,9 @@ app.get('/api/sync', async (req, res) => {
         { key: 'quotations', query: "SELECT quote_no as id, date, customer_name as cust, item_name as item, qty, total_amount as total, discount, status, branch as business FROM quotations" },
         { key: 'deliveries', query: "SELECT invoice_no, courier, tracking_no, cod_amount, delivery_status, cod_status, branch as business FROM deliveries" },
         { key: 'raw_materials', query: "SELECT name, qty, unit, unit_price, branch as business FROM raw_materials" },
-        { key: 'payroll', query: "SELECT date, name, type, amount, branch as business FROM payroll" }
+        { key: 'payroll', query: "SELECT date, name, type, amount, branch as business FROM payroll" },
+        // 🔥 Web Orders Load කිරීම 🔥
+        { key: 'web_orders', query: "SELECT * FROM web_orders WHERE status = 'Pending'" }
     ];
 
     try {
@@ -69,6 +74,23 @@ app.get('/api/sync', async (req, res) => {
     } catch (err) {
         console.error("❌ Fetch Error:", err.message);
         res.status(500).json({ error: err.message });
+    }
+});
+
+// POST Route: Receive orders directly from the external website cart (NEW API)
+app.post('/api/web-orders', async (req, res) => {
+    const data = req.body;
+    console.log(`🌐 New Web Order Received: ${data.order_no}`);
+
+    try {
+        const itemsJson = JSON.stringify(data.items); 
+        await db.query(`INSERT INTO web_orders (order_no, date, customer_name, phone, address, total_amount, items, status) VALUES ($1, $2, $3, $4, $5, $6, $7, 'Pending')`, 
+        [data.order_no, data.date, data.customer_name, data.phone, data.address, data.total_amount, itemsJson]);
+
+        res.json({ success: true, message: "Web Order saved successfully!" });
+    } catch (error) {
+        console.error("❌ Web Order Error:", error.message);
+        res.json({ success: false, error: error.message });
     }
 });
 
@@ -94,10 +116,8 @@ app.post('/api/sync', async (req, res) => {
         else if (data.action === 'updateOrderStatus') {
             await db.query(`UPDATE orders SET status = $1 WHERE invoice_no = $2 AND branch = $3`, [data.status, data.id, data.business]);
         } 
-        // 🔥 INVOICE DELETE LOGIC 🔥
         else if (data.action === 'deleteOrder') {
             await db.query(`DELETE FROM orders WHERE invoice_no = $1`, [data.id]); 
-            // මෙතන AND branch = $2 අයින් කලා, මොකද combined order එකකදී ශාඛා කිහිපයකින්ම මකා දැමිය යුතු නිසා.
         }
         else if (data.action === 'saveStock') {
             await db.query(`INSERT INTO inventory (item_name, qty, price, branch) VALUES ($1, $2, $3, $4) ON CONFLICT (item_name, branch) DO UPDATE SET qty = EXCLUDED.qty, price = EXCLUDED.price`, 
@@ -151,6 +171,10 @@ app.post('/api/sync', async (req, res) => {
         else if (data.action === 'deletePayroll') {
             await db.query(`DELETE FROM payroll WHERE date = $1 AND name = $2 AND amount = $3 AND branch = $4`, 
             [data.date, data.name, data.amount, data.business]);
+        }
+        // 🔥 Web Order එක Accept කළාට පස්සේ ඒක Update කරන කෑල්ල 🔥
+        else if (data.action === 'updateWebOrderStatus') {
+            await db.query(`UPDATE web_orders SET status = $1 WHERE order_no = $2`, [data.status, data.order_no]);
         }
 
         res.json({ success: true });
