@@ -126,37 +126,36 @@
         th { background: rgba(212, 175, 55, 0.1); color: var(--gold-primary); font-weight: 800; text-transform: uppercase; font-size: 13px; }
 
         /* 1. මේක තමයි ප්‍රධාන ස්ටයිල් එක */
-.printable-invoice {
-    background-color: #0a0a0a !important;
-    color: #fef0c3 !important;
-    padding: 40px; border-radius: 12px; border: 1px solid rgba(212, 175, 55, 0.4); 
-    box-shadow: 0 10px 30px rgba(0,0,0,0.8);
-    width: 100%; max-width: 210mm; min-height: 800px; margin: 0 auto; 
-    display: flex; flex-direction: column; justify-content: space-between; 
-    box-sizing: border-box; 
-}
+        .printable-invoice {
+            background-color: #0a0a0a !important;
+            color: #fef0c3 !important;
+            padding: 40px; border-radius: 12px; border: 1px solid rgba(212, 175, 55, 0.4); 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            width: 100%; max-width: 210mm; min-height: 800px; margin: 0 auto; 
+            display: flex; flex-direction: column; justify-content: space-between; 
+            box-sizing: border-box; 
+        }
 
-
-/* 3. මේක කෙලින්ම Print බොත්තම එබුවම වැඩ කරන කෑල්ල */
-@media print {
-    body { background: #ffffff !important; }
-    .printable-invoice {
-        background-color: #ffffff !important; 
-        color: #000000 !important;
-        border: 1px solid #000000 !important;
-    }
-    .printable-invoice *, 
-    .printable-invoice h1, .printable-invoice h2, 
-    .printable-invoice th, .printable-invoice td {
-        color: #000000 !important;
-        background-color: #ffffff !important;
-        border-color: #000000 !important;
-    }
-    /* ප්‍රින්ට් වෙද්දී බටන්ස් අයින් කරන්න */
-    .print-btn-class, button, .biz-hub, .sidebar, .nav-btn {
-        display: none !important;
-    }
-}
+        /* 3. මේක කෙලින්ම Print බොත්තම එබුවම වැඩ කරන කෑල්ල */
+        @media print {
+            body { background: #ffffff !important; }
+            .printable-invoice {
+                background-color: #ffffff !important; 
+                color: #000000 !important;
+                border: 1px solid #000000 !important;
+            }
+            .printable-invoice *, 
+            .printable-invoice h1, .printable-invoice h2, 
+            .printable-invoice th, .printable-invoice td {
+                color: #000000 !important;
+                background-color: #ffffff !important;
+                border-color: #000000 !important;
+            }
+            /* ප්‍රින්ට් වෙද්දී බටන්ස් අයින් කරන්න */
+            .print-btn-class, button, .biz-hub, .sidebar, .nav-btn {
+                display: none !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -182,6 +181,10 @@
                 <h2>SK Creations</h2>
                 <div class="user-badge" id="sessionBadge">User: Security Node</div>
                 <button class="nav-btn active" id="btn_dashboard" onclick="switchView('dashboard', this)">📊 Dashboard</button>
+                <button class="nav-btn" id="btn_web-orders-view" onclick="switchView('web-orders-view', this)">
+                    🌐 Web Orders 
+                    <span id="webOrderBadge" style="background: #e74c3c; color: white; border-radius: 50%; padding: 2px 6px; font-size: 11px; margin-left: 5px; display: none;">0</span>
+                </button>
                 <button class="nav-btn" id="btn_workflow-view" onclick="switchView('workflow-view', this)">🏭 Production Board</button>
                 <button class="nav-btn" id="btn_sales-view" onclick="switchView('sales-view', this)">🧾 Create Invoice</button>
                 <button class="nav-btn" id="btn_combined-view" onclick="switchView('combined-view', this)">🔥 SK Creations Invoice</button>
@@ -285,6 +288,26 @@
                                 <tbody id="recentSalesTable"></tbody>
                             </table>
                         </div>
+                    </div>
+                </div>
+
+                <div id="web-orders-view" class="app-view">
+                    <div class="card">
+                        <h2>🌐 New Web Orders (Pending)</h2>
+                        <p style="color: var(--gold-light); font-size: 13px; margin-bottom: 15px;">Orders placed via the website will appear here. Accept them to send an auto-WhatsApp message to the customer.</p>
+                        <table style="width: 100%; text-align: left;">
+                            <thead>
+                                <tr>
+                                    <th>Order No & Date</th>
+                                    <th>Customer Details</th>
+                                    <th>Items</th>
+                                    <th>Total (Rs)</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="webOrdersTableBody">
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 
@@ -702,6 +725,8 @@
         </div>
     </div>
     <script>
+        let pendingWebOrders = [];
+
         window.addEventListener('storage', function(e) {
     if (e.key === 'db_update') {
         fetch(WEB_APP_URL)
@@ -759,6 +784,8 @@ window.onload = function() {
             if(cloudMaster.raw_materials) { cloudMaster.raw_materials.forEach(r => { let targetBiz = r.business; if(targetBiz === "SK Creations") targetBiz = "SK Crafts"; if(dataStore[targetBiz]) { dataStore[targetBiz].raw_materials.push(r); } }); }
             if(cloudMaster.payroll) { cloudMaster.payroll.forEach(p => { let targetBiz = p.business; if(targetBiz === "SK Creations") targetBiz = "SK Crafts"; if(dataStore[targetBiz]) { dataStore[targetBiz].payroll.push(p); } }); }
 
+            if(cloudMaster.web_orders) { pendingWebOrders = cloudMaster.web_orders; }
+
             ensureDataStoreFallbacks(); updateNextCombinedInvoiceNumber(); reRenderEntireUI();
             if(statusTextEl) statusTextEl.textContent = "🔐 Database Synced & Encrypted. Security Node Armed.";
         })
@@ -807,12 +834,12 @@ function unlockSystemWorkspace() {
     let badge = document.getElementById('sessionBadge'); 
     if(badge) badge.textContent = "User: " + currentUser.toUpperCase() + " (" + currentRole + ")";
     
-    let views = ['sales-view', 'combined-view', 'workflow-view', 'quotation-view', 'delivery-view', 'bom-view', 'stock-view', 'customer-view', 'expenses-view', 'payroll-view', 'pnl-view', 'users-view'];
+    let views = ['web-orders-view', 'sales-view', 'combined-view', 'workflow-view', 'quotation-view', 'delivery-view', 'bom-view', 'stock-view', 'customer-view', 'expenses-view', 'payroll-view', 'pnl-view', 'users-view'];
     views.forEach(v => {
         let btn = document.getElementById('btn_' + v);
         if(btn) { 
             let permKey = v.split('-')[0]; 
-            if(permKey === 'combined') permKey = 'sales'; 
+            if(permKey === 'combined' || permKey === 'web') permKey = 'sales'; 
             
             let hasAccess = false;
             if (activePermissions[permKey] !== undefined) {
@@ -2203,6 +2230,7 @@ function reRenderEntireUI() {
     renderRawMaterials();
     renderPayroll();
     renderPnL();
+    renderWebOrders();
     
     if (activePermissions && activePermissions.users) {
         renderUserManagementTable(); 
@@ -2234,6 +2262,60 @@ function reRenderEntireUI() {
         });
         if (currentSelection) delInvSelect.value = currentSelection;
     }
+}
+
+// 🌐 Web Orders ටික පෙන්වන ෆන්ක්ෂන් එක
+function renderWebOrders() {
+    let tbody = document.getElementById('webOrdersTableBody');
+    let badge = document.getElementById('webOrderBadge');
+    if (!tbody) return;
+    
+    tbody.innerHTML = "";
+    if (pendingWebOrders.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color: #aaa;">No pending web orders found.</td></tr>';
+        if(badge) badge.style.display = 'none';
+        return;
+    }
+
+    if(badge) {
+        badge.textContent = pendingWebOrders.length;
+        badge.style.display = 'inline-block';
+    }
+
+    pendingWebOrders.forEach((order, idx) => {
+        let itemsClean = order.items.replace(/\[|\]|"/g, '').replace(/,/g, '<br>• ');
+        tbody.innerHTML += `
+            <tr>
+                <td><strong>${order.order_no}</strong><br><small style="color: #aaa;">${order.date}</small></td>
+                <td><strong>${order.customer_name}</strong><br><small>📞 ${order.phone}</small><br><small>📍 ${order.address}</small></td>
+                <td style="color: var(--gold-light);">• ${itemsClean}</td>
+                <td style="color: var(--gold-primary); font-weight: bold;">Rs. ${order.total_amount}</td>
+                <td>
+                    <button onclick="acceptWebOrder(${idx})" class="btn" style="background: #25D366; color: #111; padding: 8px 12px; font-size: 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">✅ Accept & WhatsApp</button>
+                </td>
+            </tr>`;
+    });
+}
+
+// 🌐 Order එක Accept කරලා WhatsApp යවන ෆන්ක්ෂන් එක
+function acceptWebOrder(idx) {
+    let order = pendingWebOrders[idx];
+    
+    // WhatsApp Number එක හදනවා
+    let phone = order.phone.replace(/[^0-9]/g, '');
+    if (phone.startsWith('0')) phone = '94' + phone.substring(1);
+
+    // යවන මැසේජ් එක
+    let msg = `*SK CREATIONS - WEB ORDER RECEIVED*\n-----------------------------------\nHi ${order.customer_name},\n\nThank you for your order (*${order.order_no}*). We have received your request for:\n\n${order.items.replace(/\[|\]|"/g, '')}\n\n*Total Bill:* Rs. ${order.total_amount}\n\nTo confirm and process your order, please reply to this message. Let us know if your delivery address is correct:\n📍 ${order.address}\n\nThank you!`;
+
+    window.open("https://api.whatsapp.com/send?phone=" + phone + "&text=" + encodeURIComponent(msg), '_blank');
+
+    // Database එකේ Status එක Update කරනවා
+    dispatchToCloud({ action: "updateWebOrderStatus", order_no: order.order_no, status: "Accepted" });
+    
+    // ලිස්ට් එකෙන් අයින් කරනවා
+    pendingWebOrders.splice(idx, 1);
+    renderWebOrders();
 }
 </script>
 </body>
