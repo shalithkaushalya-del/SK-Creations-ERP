@@ -2302,12 +2302,9 @@ function acceptWebOrder(idx) {
     if(!confirm("Are you sure you want to Accept this Web Order? This will automatically generate an invoice, deduct stock, and move it to the Production Board.")) return;
 
     let order = pendingWebOrders[idx];
-    
-    // WhatsApp Number එක හදනවා
     let phone = order.phone.replace(/[^0-9]/g, '');
     if (phone.startsWith('0')) phone = '94' + phone.substring(1);
 
-    // 1. Items ටික Parse කරගන්නවා
     let parsedItems = [];
     try {
         parsedItems = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
@@ -2321,27 +2318,28 @@ function acceptWebOrder(idx) {
         let iName = "";
         let iQty = 1;
         let unitPrice = 0;
+        let foundBiz = "SK Crafts"; // Default
 
+        // 🔥 වෙබ්සයිට් එකෙන් එවන Business Category එක කෙලින්ම ගන්නවා (Stock එකේ නම වෙනස් වුණත් අවුලක් නෑ) 🔥
         if (typeof item === 'object' && item.name) {
             iName = item.name;
             iQty = item.qty || 1;
             unitPrice = item.price || 0;
+            if (item.business) {
+                foundBiz = item.business; // මේකෙන් තමයි හරියටම SK Fashion/Digital අඳුරගන්නේ
+            }
         } else {
-            let cleanStr = String(item).replace(/\[|\]/g, ''); 
+            let cleanStr = String(item).replace(/\[|\]|"/g, ''); 
             let parts = cleanStr.split(' x '); 
             iName = parts[0].trim();
             iQty = parseInt(parts[1]) || 1;
         }
         
-        // 🔥 සුපිරිම කෑල්ල: ERP එක එයාගේම Stock එකේ හොයනවා මේක අයිති කාටද කියලා! 🔥
-        let foundBiz = "SK Crafts"; // Default
-        ["SK Crafts", "SK Fashion", "SK Digital"].forEach(b => {
-            let match = dataStore[b].stock.find(s => s.name === iName);
-            if(match) { 
-                foundBiz = b; // Fashion නම් SK Fashion කියලා ඉබේම ගන්නවා
-                if(unitPrice === 0) unitPrice = match.price; 
-            }
-        });
+        // Stock එකේ තියෙනවද බලලා Price එක ගන්නවා
+        let stockMatch = dataStore[foundBiz].stock.find(s => s.name.toLowerCase() === iName.toLowerCase());
+        if (stockMatch && unitPrice === 0) {
+            unitPrice = stockMatch.price;
+        }
 
         involvedBusinesses.add(foundBiz);
         let itemTotal = unitPrice * iQty;
@@ -2349,8 +2347,6 @@ function acceptWebOrder(idx) {
         
         formattedOrderItems.push({ business: foundBiz, name: iName, price: unitPrice, qty: iQty, total: itemTotal });
         
-        // Stock අඩු කිරීම
-        let stockMatch = dataStore[foundBiz].stock.find(s => s.name === iName);
         if (stockMatch) {
             stockMatch.qty -= iQty;
             dispatchToCloud({ action: "saveStock", business: foundBiz, name: stockMatch.name, qty: stockMatch.qty, price: stockMatch.price });
@@ -2360,11 +2356,10 @@ function acceptWebOrder(idx) {
         }
     });
 
-    // 2. Auto-Invoice ID එක SKC, SKF, SKD කියලා හදන කෑල්ල
     let isComb = involvedBusinesses.size > 1;
     let targetBiz = isComb ? "SK Creations" : Array.from(involvedBusinesses)[0];
     
-    // මෙතනින් තමයි SKF අකුරු 3 හැදෙන්නේ
+    // 🔥 SKF, SKD, SKC Prefix එක හැදෙන තැන 🔥
     let prefix = isComb ? "COMB" : (targetBiz === "SK Crafts" ? "SKC" : targetBiz === "SK Fashion" ? "SKF" : "SKD");
     let maxNum = 1000;
     
@@ -2379,7 +2374,6 @@ function acceptWebOrder(idx) {
     let newInvId = prefix + "-" + (maxNum + 1);
     let orderDate = new Date().toISOString().split('T')[0];
 
-    // 3. Order එක Database එකට Save කිරීම
     let finalTotal = calculatedTotal > 0 ? calculatedTotal : order.total_amount;
     let orderData = { 
         action: "saveOrder", 
@@ -2404,7 +2398,6 @@ function acceptWebOrder(idx) {
 
     dispatchToCloud(orderData);
 
-    // 4. Customer Save කිරීම
     let cBiz = targetBiz === "SK Creations" ? "SK Crafts" : targetBiz;
     let existingCust = dataStore[cBiz].customers.find(c => c.phone === order.phone || c.name === order.customer_name);
     if (!existingCust) {
@@ -2414,7 +2407,6 @@ function acceptWebOrder(idx) {
          dispatchToCloud({ action: "saveCustomer", business: cBiz, ...customerObj }); 
     }
 
-    // 5. WhatsApp මැසේජ් එක යැවීම (දැන් SKF-1002 වගේ හරියටම යයි)
     let msg = `*SK CREATIONS - ORDER ACCEPTED ✅*\n-----------------------------------\nHi ${order.customer_name},\n\nWe have accepted your order and it's now in our Production Queue. 🏭\n\n*Your Official Invoice No:* ${newInvId}\n\nWe will prepare your items and notify you once they are ready for dispatch to:\n📍 ${order.address}\n\nThank you for choosing SK Creations! ✨`;
 
     window.open("https://api.whatsapp.com/send?phone=" + phone + "&text=" + encodeURIComponent(msg), '_blank');
