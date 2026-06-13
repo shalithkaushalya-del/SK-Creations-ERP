@@ -2297,7 +2297,7 @@ function renderWebOrders() {
     });
 }
 
-// 🌐 Order එක Accept කරලා Auto-Invoice ගහලා Kanban Board එකට යවන සුපිරි ෆන්ක්ෂන් එක
+// 🌐 Order එක Accept කරලා Auto-Invoice ගහලා Kanban Board එකට යවන සුපිරි ෆන්ක්ෂන් එක// 🌐 Order එක Accept කරලා Auto-Invoice ගහලා Kanban Board එකට යවන සුපිරි ෆන්ක්ෂන් එක
 function acceptWebOrder(idx) {
     if(!confirm("Are you sure you want to Accept this Web Order? This will automatically generate an invoice, deduct stock, and move it to the Production Board.")) return;
 
@@ -2328,6 +2328,7 @@ function acceptWebOrder(idx) {
         let foundBiz = "SK Crafts"; // Default
         let unitPrice = 0;
         
+        // 🔥 මෙන්න මෙතන තමයි SK Digital එකත් තියෙන්නේ 🔥
         ["SK Crafts", "SK Fashion", "SK Digital"].forEach(b => {
             let match = dataStore[b].stock.find(s => s.name === item.name);
             if(match) { foundBiz = b; unitPrice = match.price; }
@@ -2350,6 +2351,8 @@ function acceptWebOrder(idx) {
     // 2. Auto-Invoice ID සහ Business තීරණය කිරීම (SKC, SKF, SKD or COMB)
     let isComb = involvedBusinesses.size > 1;
     let targetBiz = isComb ? "SK Creations" : Array.from(involvedBusinesses)[0];
+    
+    // 🔥 මෙන්න මෙතන Prefix එක තීරණය කරද්දී SK Digital (SKD) අඳුරගන්නවා 🔥
     let prefix = isComb ? "COMB" : (targetBiz === "SK Crafts" ? "SKC" : targetBiz === "SK Fashion" ? "SKF" : "SKD");
     let maxNum = 1000;
     
