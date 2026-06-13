@@ -2297,25 +2297,121 @@ function renderWebOrders() {
     });
 }
 
-// 🌐 Order එක Accept කරලා WhatsApp යවන ෆන්ක්ෂන් එක
+// 🌐 Order එක Accept කරලා Auto-Invoice ගහලා Kanban Board එකට යවන සුපිරි ෆන්ක්ෂන් එක
 function acceptWebOrder(idx) {
+    if(!confirm("Are you sure you want to Accept this Web Order? This will automatically generate an invoice, deduct stock, and move it to the Production Board.")) return;
+
     let order = pendingWebOrders[idx];
     
     // WhatsApp Number එක හදනවා
     let phone = order.phone.replace(/[^0-9]/g, '');
     if (phone.startsWith('0')) phone = '94' + phone.substring(1);
 
-    // යවන මැසේජ් එක
-    let msg = `*SK CREATIONS - WEB ORDER RECEIVED*\n-----------------------------------\nHi ${order.customer_name},\n\nThank you for your order (*${order.order_no}*). We have received your request for:\n\n${order.items.replace(/\[|\]|"/g, '')}\n\n*Total Bill:* Rs. ${order.total_amount}\n\nTo confirm and process your order, please reply to this message. Let us know if your delivery address is correct:\n📍 ${order.address}\n\nThank you!`;
+    // 1. Items ටික Parse කරලා Business එක හොයාගන්නවා
+    let parsedItems = [];
+    try {
+        let itemStrings = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
+        itemStrings.forEach(str => {
+            let cleanStr = str.replace(/\[|\]/g, ''); 
+            let parts = cleanStr.split(' x '); 
+            let iName = parts[0].trim();
+            let iQty = parseInt(parts[1]) || 1;
+            parsedItems.push({ name: iName, qty: iQty });
+        });
+    } catch (e) { console.error("Error parsing items", e); }
+
+    let involvedBusinesses = new Set();
+    let formattedOrderItems = [];
+    let calculatedTotal = 0;
+    
+    parsedItems.forEach(item => {
+        let foundBiz = "SK Crafts"; // Default
+        let unitPrice = 0;
+        
+        ["SK Crafts", "SK Fashion", "SK Digital"].forEach(b => {
+            let match = dataStore[b].stock.find(s => s.name === item.name);
+            if(match) { foundBiz = b; unitPrice = match.price; }
+        });
+        
+        involvedBusinesses.add(foundBiz);
+        let itemTotal = unitPrice * item.qty;
+        calculatedTotal += itemTotal;
+        
+        formattedOrderItems.push({ business: foundBiz, name: item.name, price: unitPrice, qty: item.qty, total: itemTotal });
+        
+        // Stock අඩු කිරීම
+        let stockMatch = dataStore[foundBiz].stock.find(s => s.name === item.name);
+        if (stockMatch) {
+            stockMatch.qty -= item.qty;
+            dispatchToCloud({ action: "saveStock", business: foundBiz, name: stockMatch.name, qty: stockMatch.qty, price: stockMatch.price });
+        }
+    });
+
+    // 2. Auto-Invoice ID සහ Business තීරණය කිරීම (SKC, SKF, SKD or COMB)
+    let isComb = involvedBusinesses.size > 1;
+    let targetBiz = isComb ? "SK Creations" : Array.from(involvedBusinesses)[0];
+    let prefix = isComb ? "COMB" : (targetBiz === "SK Crafts" ? "SKC" : targetBiz === "SK Fashion" ? "SKF" : "SKD");
+    let maxNum = 1000;
+    
+    if (isComb) {
+        ["SK Crafts", "SK Fashion", "SK Digital"].forEach(b => {
+            dataStore[b].orders.forEach(o => { if (o.id && o.id.toUpperCase().startsWith("COMB-")) { let num = parseInt(o.id.split('-')[1]); if (!isNaN(num) && num > maxNum) maxNum = num; } });
+        });
+    } else {
+        dataStore[targetBiz].orders.forEach(o => { if (o.id && o.id.toUpperCase().startsWith(prefix + "-")) { let num = parseInt(o.id.split('-')[1]); if (!isNaN(num) && num > maxNum) maxNum = num; } });
+    }
+    
+    let newInvId = prefix + "-" + (maxNum + 1);
+    let orderDate = new Date().toISOString().split('T')[0];
+
+    // 3. Order එක Database එකට Save කිරීම (Production Board එකට යැවීම)
+    let orderData = { 
+        action: "saveOrder", 
+        id: newInvId, 
+        date: orderDate, 
+        cust: order.customer_name, 
+        address: order.address, 
+        total: calculatedTotal > 0 ? calculatedTotal : order.total_amount, 
+        discount: 0, 
+        paidAmount: 0, 
+        balanceAmount: calculatedTotal > 0 ? calculatedTotal : order.total_amount, 
+        method: "COD", 
+        status: "Pending", 
+        business: targetBiz, 
+        items: formattedOrderItems 
+    };
+    
+    formattedOrderItems.forEach(item => {
+        let pushBiz = isComb ? item.business : targetBiz;
+        dataStore[pushBiz].orders.push({ id: newInvId, date: orderDate, cust: order.customer_name, address: order.address, item: item.name, qty: item.qty, total: item.total, discount: 0, paidAmount: 0, balanceAmount: orderData.balanceAmount, method: "COD", status: "Pending" });
+    });
+
+    dispatchToCloud(orderData);
+
+    // 4. Customer Database එකට අලුත් කස්ටමර්ව Save කිරීම
+    let cBiz = targetBiz === "SK Creations" ? "SK Crafts" : targetBiz;
+    let existingCust = dataStore[cBiz].customers.find(c => c.phone === order.phone || c.name === order.customer_name);
+    if (!existingCust) {
+         let nId = "C-" + (dataStore[cBiz].customers.length + 101); 
+         let customerObj = { id: nId, name: order.customer_name, phone: order.phone, address: order.address }; 
+         dataStore[cBiz].customers.push(customerObj); 
+         dispatchToCloud({ action: "saveCustomer", business: cBiz, ...customerObj }); 
+    }
+
+    // 5. WhatsApp මැසේජ් එක යැවීම (Invoice Number එකත් එක්ක)
+    let msg = `*SK CREATIONS - ORDER ACCEPTED ✅*\n-----------------------------------\nHi ${order.customer_name},\n\nWe have accepted your order and it's now in our Production Queue. 🏭\n\n*Your Official Invoice No:* ${newInvId}\n\nWe will prepare your items and notify you once they are ready for dispatch to:\n📍 ${order.address}\n\nThank you for choosing SK Creations! ✨`;
 
     window.open("https://api.whatsapp.com/send?phone=" + phone + "&text=" + encodeURIComponent(msg), '_blank');
 
-    // Database එකේ Status එක Update කරනවා
+    // 6. Web Orders වලින් මේක අයින් කරනවා
     dispatchToCloud({ action: "updateWebOrderStatus", order_no: order.order_no, status: "Accepted" });
-    
-    // ලිස්ට් එකෙන් අයින් කරනවා
     pendingWebOrders.splice(idx, 1);
+    
+    // UI එක අලුත් කරනවා
+    reRenderEntireUI();
     renderWebOrders();
+    
+    alert(`Order Activated! Invoice ${newInvId} generated and successfully moved to the Production Board.`);
 }
 </script>
 </body>
