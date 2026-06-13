@@ -2297,9 +2297,9 @@ function renderWebOrders() {
     });
 }
 
-// 🌐 Order එක Accept කරලා Auto-Invoice ගහලා Kanban Board එකට යවන සුපිරි ෆන්ක්ෂන් එක
+// 🌐 Order එක Accept කරලා Auto-Invoice ගහන ස්මාර්ට් ෆන්ක්ෂන් එක
 function acceptWebOrder(idx) {
-    if(!confirm("Are you sure you want to Accept this Web Order? This will automatically generate an invoice, deduct stock, and move it to the Production Board.")) return;
+    if(!confirm("Are you sure? This will generate the invoice and move to Production.")) return;
 
     let order = pendingWebOrders[idx];
     let phone = order.phone.replace(/[^0-9]/g, '');
@@ -2318,16 +2318,14 @@ function acceptWebOrder(idx) {
         let iName = "";
         let iQty = 1;
         let unitPrice = 0;
-        let foundBiz = "SK Crafts"; // Default
+        let foundBiz = "SK Crafts"; 
 
-        // 🔥 වෙබ්සයිට් එකෙන් එවන Business Category එක කෙලින්ම ගන්නවා (Stock එකේ නම වෙනස් වුණත් අවුලක් නෑ) 🔥
         if (typeof item === 'object' && item.name) {
             iName = item.name;
             iQty = item.qty || 1;
             unitPrice = item.price || 0;
-            if (item.business) {
-                foundBiz = item.business; // මේකෙන් තමයි හරියටම SK Fashion/Digital අඳුරගන්නේ
-            }
+            // 🔥 වෙබ් එකෙන් එවන Business එක හරියටම ගන්නවා (SK Crafts / SK Fashion / SK Digital)
+            if (item.business) foundBiz = item.business; 
         } else {
             let cleanStr = String(item).replace(/\[|\]|"/g, ''); 
             let parts = cleanStr.split(' x '); 
@@ -2335,11 +2333,8 @@ function acceptWebOrder(idx) {
             iQty = parseInt(parts[1]) || 1;
         }
         
-        // Stock එකේ තියෙනවද බලලා Price එක ගන්නවා
         let stockMatch = dataStore[foundBiz].stock.find(s => s.name.toLowerCase() === iName.toLowerCase());
-        if (stockMatch && unitPrice === 0) {
-            unitPrice = stockMatch.price;
-        }
+        if (stockMatch && unitPrice === 0) unitPrice = stockMatch.price;
 
         involvedBusinesses.add(foundBiz);
         let itemTotal = unitPrice * iQty;
@@ -2350,65 +2345,38 @@ function acceptWebOrder(idx) {
         if (stockMatch) {
             stockMatch.qty -= iQty;
             dispatchToCloud({ action: "saveStock", business: foundBiz, name: stockMatch.name, qty: stockMatch.qty, price: stockMatch.price });
-        } else {
-            dispatchToCloud({ action: "saveStock", business: foundBiz, name: iName, qty: -iQty, price: unitPrice });
-            dataStore[foundBiz].stock.push({name: iName, qty: -iQty, price: unitPrice});
         }
     });
 
     let isComb = involvedBusinesses.size > 1;
     let targetBiz = isComb ? "SK Creations" : Array.from(involvedBusinesses)[0];
     
-    // 🔥 SKF, SKD, SKC Prefix එක හැදෙන තැන 🔥
+    // 🔥 මෙන්න මෙතන තමයි Prefix එක හදන්නේ (SKC/SKF/SKD/COMB) 🔥
     let prefix = isComb ? "COMB" : (targetBiz === "SK Crafts" ? "SKC" : targetBiz === "SK Fashion" ? "SKF" : "SKD");
     let maxNum = 1000;
     
-    if (isComb) {
-        ["SK Crafts", "SK Fashion", "SK Digital"].forEach(b => {
-            dataStore[b].orders.forEach(o => { if (o.id && o.id.toUpperCase().startsWith("COMB-")) { let num = parseInt(o.id.split('-')[1]); if (!isNaN(num) && num > maxNum) maxNum = num; } });
+    // Prefix එකට අදාළව පරණ ඉන්වොයිස් නම්බර් හොයනවා
+    ["SK Crafts", "SK Fashion", "SK Digital"].forEach(b => {
+        dataStore[b].orders.forEach(o => { 
+            if (o.id && o.id.toUpperCase().startsWith(prefix + "-")) { 
+                let num = parseInt(o.id.split('-')[1]); 
+                if (!isNaN(num) && num > maxNum) maxNum = num; 
+            } 
         });
-    } else {
-        dataStore[targetBiz].orders.forEach(o => { if (o.id && o.id.toUpperCase().startsWith(prefix + "-")) { let num = parseInt(o.id.split('-')[1]); if (!isNaN(num) && num > maxNum) maxNum = num; } });
-    }
+    });
     
     let newInvId = prefix + "-" + (maxNum + 1);
     let orderDate = new Date().toISOString().split('T')[0];
 
-    let finalTotal = calculatedTotal > 0 ? calculatedTotal : order.total_amount;
-    let orderData = { 
-        action: "saveOrder", 
-        id: newInvId, 
-        date: orderDate, 
-        cust: order.customer_name, 
-        address: order.address, 
-        total: finalTotal, 
-        discount: 0, 
-        paidAmount: 0, 
-        balanceAmount: finalTotal, 
-        method: "COD", 
-        status: "Pending", 
-        business: targetBiz, 
-        items: formattedOrderItems 
-    };
+    let orderData = { action: "saveOrder", id: newInvId, date: orderDate, cust: order.customer_name, address: order.address, total: calculatedTotal, discount: 0, paidAmount: 0, balanceAmount: calculatedTotal, method: "COD", status: "Pending", business: targetBiz, items: formattedOrderItems };
     
     formattedOrderItems.forEach(item => {
-        let pushBiz = isComb ? item.business : targetBiz;
-        dataStore[pushBiz].orders.push({ id: newInvId, date: orderDate, cust: order.customer_name, address: order.address, item: item.name, qty: item.qty, total: item.total, discount: 0, paidAmount: 0, balanceAmount: orderData.balanceAmount, method: "COD", status: "Pending" });
+        dataStore[item.business].orders.push({ id: newInvId, date: orderDate, cust: order.customer_name, address: order.address, item: item.name, qty: item.qty, total: item.total, discount: 0, paidAmount: 0, balanceAmount: calculatedTotal, method: "COD", status: "Pending" });
     });
 
     dispatchToCloud(orderData);
 
-    let cBiz = targetBiz === "SK Creations" ? "SK Crafts" : targetBiz;
-    let existingCust = dataStore[cBiz].customers.find(c => c.phone === order.phone || c.name === order.customer_name);
-    if (!existingCust) {
-         let nId = "C-" + (dataStore[cBiz].customers.length + 101); 
-         let customerObj = { id: nId, name: order.customer_name, phone: order.phone, address: order.address }; 
-         dataStore[cBiz].customers.push(customerObj); 
-         dispatchToCloud({ action: "saveCustomer", business: cBiz, ...customerObj }); 
-    }
-
-    let msg = `*SK CREATIONS - ORDER ACCEPTED ✅*\n-----------------------------------\nHi ${order.customer_name},\n\nWe have accepted your order and it's now in our Production Queue. 🏭\n\n*Your Official Invoice No:* ${newInvId}\n\nWe will prepare your items and notify you once they are ready for dispatch to:\n📍 ${order.address}\n\nThank you for choosing SK Creations! ✨`;
-
+    let msg = `*SK CREATIONS - ORDER ACCEPTED ✅*\n-----------------------------------\nHi ${order.customer_name},\n\nWe have accepted your order! 🏭\n\n*Your Official Invoice No:* ${newInvId}\n\nWe will notify you once ready for dispatch.\n\nThank you! ✨`;
     window.open("https://api.whatsapp.com/send?phone=" + phone + "&text=" + encodeURIComponent(msg), '_blank');
 
     dispatchToCloud({ action: "updateWebOrderStatus", order_no: order.order_no, status: "Accepted" });
@@ -2416,8 +2384,7 @@ function acceptWebOrder(idx) {
     
     reRenderEntireUI();
     renderWebOrders();
-    
-    alert(`Order Activated! Invoice ${newInvId} generated and successfully moved to the Production Board.`);
+    alert(`Order Activated! Invoice ${newInvId} generated.`);
 }
 </script>
 </body>
