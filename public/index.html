@@ -2265,6 +2265,7 @@ function reRenderEntireUI() {
 }
 
 // 🌐 Web Orders පෙන්වන ෆන්ක්ෂන් එක (Slip එක පෙන්වයි)
+function // 🌐 Web Orders පෙන්වන ෆන්ක්ෂන් එක
 function renderWebOrders() {
     let tbody = document.getElementById('webOrdersTableBody');
     let badge = document.getElementById('webOrderBadge');
@@ -2289,12 +2290,15 @@ function renderWebOrders() {
 
         try {
             let parsedItems = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
+            if(!Array.isArray(parsedItems)) parsedItems = [parsedItems];
+            
             parsedItems.forEach(i => {
-                if(i.isMeta) {
+                if(typeof i === 'object' && i.isMeta) {
                     payMethod = i.method;
                     slipUrl = i.slip;
-                } else if(typeof i === 'object') {
-                    itemsHTML += `• [${i.business.split(' ')[1]}] ${i.name} (x${i.qty})<br>`;
+                } else if(typeof i === 'object' && i.name) {
+                    let bizName = i.business ? `[${i.business.split(' ')[1]}] ` : '';
+                    itemsHTML += `• ${bizName}${i.name} (x${i.qty})<br>`;
                 } else {
                     let cleanStr = String(i).replace(/\[|\]|"/g, '');
                     itemsHTML += `• ${cleanStr}<br>`;
@@ -2322,192 +2326,192 @@ function renderWebOrders() {
     });
 }
 
-// 🌐 Order එක Accept කරලා Auto-Invoice ගහන ස්මාර්ට් ෆන්ක්ෂන් එක (Payment Setup එකත් එක්ක)
+// 🌐 Order එක Accept කරලා Auto-Invoice ගහන ස්මාර්ට් ෆන්ක්ෂන් එක (Error-Proof & Payment Ready)
 function acceptWebOrder(idx) {
-    let order = pendingWebOrders[idx];
-    let phone = order.phone ? String(order.phone).replace(/[^0-9]/g, '') : "";
-    if (phone.startsWith('0')) phone = '94' + phone.substring(1);
-
-    let parsedItems = [];
-    try { parsedItems = typeof order.items === 'string' ? JSON.parse(order.items) : order.items; } catch (e) { }
-
-    let meta = parsedItems.find(i => i.isMeta) || { method: "COD", slip: "" };
-    let actualItemsList = parsedItems.filter(i => !i.isMeta);
-
-    let involvedBusinesses = new Set();
-    let formattedOrderItems = [];
-    let calculatedTotal = 0;
-    
-    actualItemsList.forEach(item => {
-        let iName = item.name || "Unknown Item";
-        let iQty = parseInt(item.qty) || 1;
-        let unitPrice = parseFloat(item.price) || 0;
-        let foundBiz = item.business || "";
-
-        if (!foundBiz || foundBiz === "") {
-            let tempBiz = "SK Crafts";
-            ["SK Crafts", "SK Fashion", "SK Digital"].forEach(b => {
-                let match = dataStore[b].stock.find(s => s.name.trim().toLowerCase() === iName.trim().toLowerCase());
-                if (match) { tempBiz = b; if (unitPrice === 0) unitPrice = parseFloat(match.price) || 0; }
-            });
-            foundBiz = tempBiz;
-        } else {
-            if(dataStore[foundBiz]) {
-                let match = dataStore[foundBiz].stock.find(s => s.name.trim().toLowerCase() === iName.trim().toLowerCase());
-                if (match && unitPrice === 0) unitPrice = parseFloat(match.price) || 0;
-            }
-        }
+    try {
+        let order = pendingWebOrders[idx];
+        if(!order) return;
         
-        involvedBusinesses.add(foundBiz);
-        let itemTotal = unitPrice * iQty;
-        calculatedTotal += itemTotal;
-        formattedOrderItems.push({ business: foundBiz, name: iName, price: unitPrice, qty: iQty, total: itemTotal });
-    });
+        let phone = order.phone ? String(order.phone).replace(/[^0-9]/g, '') : "";
+        if (phone.startsWith('0')) phone = '94' + phone.substring(1);
 
-    let defaultPaid = meta.method === "Bank Transfer" ? calculatedTotal : 0;
+        let parsedItems = [];
+        try { parsedItems = typeof order.items === 'string' ? JSON.parse(order.items) : order.items; } catch (e) { }
+        if (!Array.isArray(parsedItems)) parsedItems = [parsedItems];
 
-    // 🔥 Invoice එක Generate කරන්න කලින් ඇඩ්මින්ට Edit කරන්න දෙන Popup එක 🔥
-    Swal.fire({
-        title: 'Configure Invoice Payment',
-        html: `
-            <div style="text-align:left; font-size:14px; color:#fef0c3;">
-                <p style="margin-bottom:15px; color:#D4AF37; font-weight:bold;">Total Bill Amount: Rs. ${calculatedTotal}</p>
-                <label>Payment Method:</label>
-                <select id="erp-method" class="swal2-input" style="width:100%; margin-top:5px; margin-bottom:15px;">
-                    <option value="COD" ${meta.method === 'COD' ? 'selected' : ''}>COD</option>
-                    <option value="Bank Transfer" ${meta.method === 'Bank Transfer' ? 'selected' : ''}>Bank Transfer</option>
-                </select>
-                <label>Paid Amount (Advance) Rs:</label>
-                <input type="number" id="erp-paid" class="swal2-input" value="${defaultPaid}" style="width:100%; margin-top:5px; margin-bottom:15px;">
-                <label>Discount (Rs):</label>
-                <input type="number" id="erp-discount" class="swal2-input" value="0" style="width:100%; margin-top:5px;">
-            </div>
-        `,
-        showCancelButton: true,
-        confirmButtonText: 'Generate Invoice',
-        confirmButtonColor: '#25D366',
-        cancelButtonColor: '#e74c3c',
-        background: 'rgba(15,20,30,0.98)',
-        color: '#D4AF37',
-        preConfirm: () => {
-            return {
-                method: document.getElementById('erp-method').value,
-                paid: parseFloat(document.getElementById('erp-paid').value) || 0,
-                discount: parseFloat(document.getElementById('erp-discount').value) || 0
-            }
-        }
-    }).then((result) => {
-        if (result.isConfirmed) {
-            
-            // ඩේටා Save කරන කෑල්ල
-            let userConfig = result.value;
-            let finalNet = calculatedTotal - userConfig.discount;
-            let finalBalance = finalNet - userConfig.paid;
-            if(finalBalance < 0) finalBalance = 0;
+        let meta = parsedItems.find(i => typeof i === 'object' && i.isMeta) || { method: "COD", slip: "" };
+        let actualItemsList = parsedItems.filter(i => !(typeof i === 'object' && i.isMeta));
 
-            // Stock අඩු කිරීම
-            formattedOrderItems.forEach(item => {
-                if(dataStore[item.business]) {
-                    let stockMatch = dataStore[item.business].stock.find(s => s.name.trim().toLowerCase() === item.name.trim().toLowerCase());
-                    if (stockMatch) {
-                        stockMatch.qty -= item.qty;
-                        dispatchToCloud({ action: "saveStock", business: item.business, name: stockMatch.name, qty: stockMatch.qty, price: stockMatch.price });
-                    } else {
-                        dispatchToCloud({ action: "saveStock", business: item.business, name: item.name, qty: -item.qty, price: item.price });
-                        dataStore[item.business].stock.push({name: item.name, qty: -item.qty, price: item.price});
-                    }
-                }
-            });
+        let involvedBusinesses = new Set();
+        let formattedOrderItems = [];
+        let calculatedTotal = 0;
+        
+        actualItemsList.forEach(item => {
+            if(!item) return;
+            let iName = ""; let iQty = 1; let unitPrice = 0; let foundBiz = "";
 
-            let isComb = involvedBusinesses.size > 1;
-            let targetBiz = isComb ? "SK Creations" : Array.from(involvedBusinesses)[0];
-            if(!targetBiz) targetBiz = "SK Crafts";
-            
-            let prefix = isComb ? "COMB" : (targetBiz === "SK Crafts" ? "SKC" : targetBiz === "SK Fashion" ? "SKF" : "SKD");
-            let maxNum = 1000;
-            
-            if (isComb) {
-                ["SK Crafts", "SK Fashion", "SK Digital"].forEach(b => {
-                    if(dataStore[b] && dataStore[b].orders) {
-                        dataStore[b].orders.forEach(o => { if (o.id && o.id.toUpperCase().startsWith("COMB-")) { let num = parseInt(o.id.split('-')[1]); if (!isNaN(num) && num > maxNum) maxNum = num; } });
-                    }
-                });
+            if (typeof item === 'object' && item.name) {
+                iName = item.name; iQty = parseInt(item.qty) || 1; unitPrice = parseFloat(item.price) || 0; foundBiz = item.business || "";
             } else {
-                if(dataStore[targetBiz] && dataStore[targetBiz].orders) {
-                    dataStore[targetBiz].orders.forEach(o => { if (o.id && o.id.toUpperCase().startsWith(prefix + "-")) { let num = parseInt(o.id.split('-')[1]); if (!isNaN(num) && num > maxNum) maxNum = num; } });
+                let cleanStr = String(item).replace(/\[|\]|"/g, ''); 
+                let parts = cleanStr.split(' x '); 
+                iName = parts[0] ? parts[0].trim() : "Unknown Item";
+                iQty = parts[1] ? parseInt(parts[1]) : 1;
+            }
+
+            if (!foundBiz || foundBiz === "") {
+                let tempBiz = "SK Crafts";
+                ["SK Crafts", "SK Fashion", "SK Digital"].forEach(b => {
+                    let match = dataStore[b].stock.find(s => s.name.trim().toLowerCase() === iName.trim().toLowerCase());
+                    if (match) { tempBiz = b; if (unitPrice === 0) unitPrice = parseFloat(match.price) || 0; }
+                });
+                foundBiz = tempBiz;
+            } else {
+                if(dataStore[foundBiz]) {
+                    let match = dataStore[foundBiz].stock.find(s => s.name.trim().toLowerCase() === iName.trim().toLowerCase());
+                    if (match && unitPrice === 0) unitPrice = parseFloat(match.price) || 0;
                 }
             }
             
-            let newInvId = prefix + "-" + (maxNum + 1);
-            let orderDate = new Date().toISOString().split('T')[0];
+            involvedBusinesses.add(foundBiz);
+            let itemTotal = unitPrice * iQty;
+            calculatedTotal += itemTotal;
+            formattedOrderItems.push({ business: foundBiz, name: iName, price: unitPrice, qty: iQty, total: itemTotal });
+        });
 
-            let orderData = { 
-                action: "saveOrder", 
-                id: newInvId, 
-                date: orderDate, 
-                cust: order.customer_name || "Unknown", 
-                address: order.address || "TBA", 
-                total: calculatedTotal, 
-                discount: userConfig.discount, 
-                paidAmount: userConfig.paid, 
-                balanceAmount: finalBalance, 
-                method: userConfig.method, 
-                status: "Pending", 
-                business: targetBiz, 
-                items: formattedOrderItems 
-            };
-            
-            formattedOrderItems.forEach(item => {
-                let pushBiz = isComb ? item.business : targetBiz;
-                if(dataStore[pushBiz]) {
-                    dataStore[pushBiz].orders.push({ id: newInvId, date: orderDate, cust: order.customer_name || "Unknown", address: order.address || "TBA", item: item.name, qty: item.qty, total: item.total, discount: userConfig.discount, paidAmount: userConfig.paid, balanceAmount: finalBalance, method: userConfig.method, status: "Pending" });
-                }
-            });
+        let defaultPaid = meta.method === "Bank Transfer" ? calculatedTotal : 0;
 
-            dispatchToCloud(orderData);
-
-            let cBiz = targetBiz === "SK Creations" ? "SK Crafts" : targetBiz;
-            if(dataStore[cBiz]) {
-                let existingCust = dataStore[cBiz].customers.find(c => c.phone === order.phone || c.name === order.customer_name);
-                if (!existingCust) {
-                     let nId = "C-" + (dataStore[cBiz].customers.length + 101); 
-                     let customerObj = { id: nId, name: order.customer_name || "Unknown", phone: order.phone || "N/A", address: order.address || "TBA" }; 
-                     dataStore[cBiz].customers.push(customerObj); 
-                     dispatchToCloud({ action: "saveCustomer", business: cBiz, ...customerObj }); 
+        Swal.fire({
+            title: 'Configure Invoice Payment',
+            html: `
+                <div style="text-align:left; font-size:14px; color:#fef0c3;">
+                    <p style="margin-bottom:15px; color:#D4AF37; font-weight:bold;">Total Bill Amount: Rs. ${calculatedTotal}</p>
+                    <label>Payment Method:</label>
+                    <select id="erp-method" class="swal2-input" style="width:100%; margin-top:5px; margin-bottom:15px;">
+                        <option value="COD" ${meta.method === 'COD' ? 'selected' : ''}>COD</option>
+                        <option value="Bank Transfer" ${meta.method === 'Bank Transfer' ? 'selected' : ''}>Bank Transfer</option>
+                    </select>
+                    <label>Paid Amount (Advance) Rs:</label>
+                    <input type="number" id="erp-paid" class="swal2-input" value="${defaultPaid}" style="width:100%; margin-top:5px; margin-bottom:15px;">
+                    <label>Discount (Rs):</label>
+                    <input type="number" id="erp-discount" class="swal2-input" value="0" style="width:100%; margin-top:5px;">
+                </div>
+            `,
+            showCancelButton: true,
+            confirmButtonText: 'Generate Invoice',
+            confirmButtonColor: '#25D366',
+            cancelButtonColor: '#e74c3c',
+            background: 'rgba(15,20,30,0.98)',
+            color: '#D4AF37',
+            preConfirm: () => {
+                return {
+                    method: document.getElementById('erp-method').value,
+                    paid: parseFloat(document.getElementById('erp-paid').value) || 0,
+                    discount: parseFloat(document.getElementById('erp-discount').value) || 0
                 }
             }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                let userConfig = result.value;
+                let finalNet = calculatedTotal - userConfig.discount;
+                let finalBalance = finalNet - userConfig.paid;
+                if(finalBalance < 0) finalBalance = 0;
 
-            let msg = `*SK CREATIONS - ORDER ACCEPTED ✅*\n-----------------------------------\nHi ${order.customer_name || ""},\n\nWe have accepted your order and it's now in our Production Queue. 🏭\n\n*Your Official Invoice No:* ${newInvId}\n*Payment Received:* Rs. ${userConfig.paid.toLocaleString()}\n\nWe will prepare your items and notify you once they are ready for dispatch to:\n📍 ${order.address || ""}\n\nThank you for choosing SK Creations! ✨`;
+                formattedOrderItems.forEach(item => {
+                    if(dataStore[item.business]) {
+                        let stockMatch = dataStore[item.business].stock.find(s => s.name.trim().toLowerCase() === item.name.trim().toLowerCase());
+                        if (stockMatch) {
+                            stockMatch.qty -= item.qty;
+                            dispatchToCloud({ action: "saveStock", business: item.business, name: stockMatch.name, qty: stockMatch.qty, price: stockMatch.price });
+                        } else {
+                            dispatchToCloud({ action: "saveStock", business: item.business, name: item.name, qty: -item.qty, price: item.price });
+                            dataStore[item.business].stock.push({name: item.name, qty: -item.qty, price: item.price});
+                        }
+                    }
+                });
 
-            if(phone) {
-                window.open("https://api.whatsapp.com/send?phone=" + phone + "&text=" + encodeURIComponent(msg), '_blank');
-            }
+                let isComb = involvedBusinesses.size > 1;
+                let targetBiz = isComb ? "SK Creations" : Array.from(involvedBusinesses)[0];
+                if(!targetBiz) targetBiz = "SK Crafts";
+                
+                let prefix = isComb ? "COMB" : (targetBiz === "SK Crafts" ? "SKC" : targetBiz === "SK Fashion" ? "SKF" : "SKD");
+                let maxNum = 1000;
+                
+                if (isComb) {
+                    ["SK Crafts", "SK Fashion", "SK Digital"].forEach(b => {
+                        if(dataStore[b] && dataStore[b].orders) {
+                            dataStore[b].orders.forEach(o => { if (o.id && o.id.toUpperCase().startsWith("COMB-")) { let num = parseInt(o.id.split('-')[1]); if (!isNaN(num) && num > maxNum) maxNum = num; } });
+                        }
+                    });
+                } else {
+                    if(dataStore[targetBiz] && dataStore[targetBiz].orders) {
+                        dataStore[targetBiz].orders.forEach(o => { if (o.id && o.id.toUpperCase().startsWith(prefix + "-")) { let num = parseInt(o.id.split('-')[1]); if (!isNaN(num) && num > maxNum) maxNum = num; } });
+                    }
+                }
+                
+                let newInvId = prefix + "-" + (maxNum + 1);
+                let orderDate = new Date().toISOString().split('T')[0];
 
-            dispatchToCloud({ action: "updateWebOrderStatus", order_no: order.order_no, status: "Accepted" });
-            pendingWebOrders.splice(idx, 1);
-            
-            currentBusiness = cBiz; 
-            let topSwitcherBtns = document.querySelectorAll('.hub-btn');
-            if (topSwitcherBtns.length > 0) {
-                topSwitcherBtns.forEach(b => {
-                    b.classList.remove('active');
-                    if(b.getAttribute('data-biz') === currentBusiness) b.classList.add('active');
+                let orderData = { 
+                    action: "saveOrder", id: newInvId, date: orderDate, cust: order.customer_name || "Unknown", address: order.address || "TBA", 
+                    total: calculatedTotal, discount: userConfig.discount, paidAmount: userConfig.paid, balanceAmount: finalBalance, method: userConfig.method, status: "Pending", business: targetBiz, items: formattedOrderItems 
+                };
+                
+                formattedOrderItems.forEach(item => {
+                    let pushBiz = isComb ? item.business : targetBiz;
+                    if(dataStore[pushBiz]) {
+                        dataStore[pushBiz].orders.push({ id: newInvId, date: orderDate, cust: order.customer_name || "Unknown", address: order.address || "TBA", item: item.name, qty: item.qty, total: item.total, discount: userConfig.discount, paidAmount: userConfig.paid, balanceAmount: finalBalance, method: userConfig.method, status: "Pending" });
+                    }
+                });
+
+                dispatchToCloud(orderData);
+
+                let cBiz = targetBiz === "SK Creations" ? "SK Crafts" : targetBiz;
+                if(dataStore[cBiz]) {
+                    let existingCust = dataStore[cBiz].customers.find(c => c.phone === order.phone || c.name === order.customer_name);
+                    if (!existingCust) {
+                         let nId = "C-" + (dataStore[cBiz].customers.length + 101); 
+                         let customerObj = { id: nId, name: order.customer_name || "Unknown", phone: order.phone || "N/A", address: order.address || "TBA" }; 
+                         dataStore[cBiz].customers.push(customerObj); 
+                         dispatchToCloud({ action: "saveCustomer", business: cBiz, ...customerObj }); 
+                    }
+                }
+
+                let msg = `*SK CREATIONS - ORDER ACCEPTED ✅*\n-----------------------------------\nHi ${order.customer_name || ""},\n\nWe have accepted your order and it's now in our Production Queue. 🏭\n\n*Your Official Invoice No:* ${newInvId}\n*Payment Received:* Rs. ${userConfig.paid.toLocaleString()}\n\nWe will prepare your items and notify you once they are ready for dispatch to:\n📍 ${order.address || ""}\n\nThank you for choosing SK Creations! ✨`;
+
+                if(phone) {
+                    window.open("https://api.whatsapp.com/send?phone=" + phone + "&text=" + encodeURIComponent(msg), '_blank');
+                }
+
+                dispatchToCloud({ action: "updateWebOrderStatus", order_no: order.order_no, status: "Accepted" });
+                pendingWebOrders.splice(idx, 1);
+                
+                currentBusiness = cBiz; 
+                let topSwitcherBtns = document.querySelectorAll('.hub-btn');
+                if (topSwitcherBtns.length > 0) {
+                    topSwitcherBtns.forEach(b => {
+                        b.classList.remove('active');
+                        if(b.getAttribute('data-biz') === currentBusiness) b.classList.add('active');
+                    });
+                }
+
+                reRenderEntireUI();
+                renderWebOrders();
+                
+                Swal.fire({
+                    title: 'Order Activated!',
+                    text: `Invoice ${newInvId} generated successfully.`,
+                    icon: 'success',
+                    background: 'rgba(15,20,30,0.98)',
+                    color: '#D4AF37',
+                    confirmButtonColor: '#25D366'
                 });
             }
-
-            reRenderEntireUI();
-            renderWebOrders();
-            
-            Swal.fire({
-                title: 'Order Activated!',
-                text: `Invoice ${newInvId} generated successfully.`,
-                icon: 'success',
-                background: 'rgba(15,20,30,0.98)',
-                color: '#D4AF37',
-                confirmButtonColor: '#25D366'
-            });
-        }
-    });
+        });
+    } catch(err) {
+        console.error(err);
+        alert("Error mapping order data: " + err.message);
+    }
 }
 </script>
 </body>
