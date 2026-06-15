@@ -759,6 +759,7 @@ let combinedCart = []; let singleCart = []; let dashFilterFrom = ""; let dashFil
 let mainBarChartInstance = null;
 let expensePieChartInstance = null;
 
+// 🔥 1. AUTO SYNC & AUTO LOGIN සහිත ප්‍රධාන ලෝඩින් ෆන්ක්ෂන් එක 🔥
 window.onload = function() {
     let statusTextEl = document.getElementById('loginStatusText');
     if(statusTextEl) statusTextEl.textContent = "Synchronizing core parameters...";
@@ -766,16 +767,20 @@ window.onload = function() {
     fetch(WEB_APP_URL)
         .then(res => res.json())
         .then(cloudMaster => {
+            // User Permissions
             if(cloudMaster.users && cloudMaster.users.length > 0) { 
                 systemUsers = cloudMaster.users.map(u => {
                     if (typeof u.perms === 'string') u.perms = JSON.parse(u.perms);
                     return u;
                 });
             }
+
+            // DataStore Reset
             dataStore["SK Crafts"] = { orders: [], stock: [], customers: [], expenses: [], quotations: [], deliveries: [], raw_materials: [], payroll: [] };
             dataStore["SK Fashion"] = { orders: [], stock: [], customers: [], expenses: [], quotations: [], deliveries: [], raw_materials: [], payroll: [] };
             dataStore["SK Digital"] = { orders: [], stock: [], customers: [], expenses: [], quotations: [], deliveries: [], raw_materials: [], payroll: [] };
 
+            // Data Mapping
             if(cloudMaster.stock) { cloudMaster.stock.forEach(item => { let targetBiz = item.business; if(targetBiz === "SK Creations") targetBiz = "SK Crafts"; if(dataStore[targetBiz]) { dataStore[targetBiz].stock.push({ name: item.name, qty: item.qty, price: item.price }); } }); }
             if(cloudMaster.customers) { cloudMaster.customers.forEach(c => { let targetBiz = c.business; if(targetBiz === "SK Creations") targetBiz = "SK Crafts"; if(dataStore[targetBiz]) { dataStore[targetBiz].customers.push({ id: c.id, name: c.name, phone: c.phone, address: c.address }); } }); }
             if(cloudMaster.orders) { cloudMaster.orders.forEach(o => { let targetBiz = o.business; if(targetBiz === "SK Creations") targetBiz = "SK Crafts"; o.discount = parseFloat(o.discount) || 0; o.status = o.status || "Pending"; if(dataStore[targetBiz]) { dataStore[targetBiz].orders.push(o); } }); }
@@ -785,17 +790,69 @@ window.onload = function() {
             if(cloudMaster.raw_materials) { cloudMaster.raw_materials.forEach(r => { let targetBiz = r.business; if(targetBiz === "SK Creations") targetBiz = "SK Crafts"; if(dataStore[targetBiz]) { dataStore[targetBiz].raw_materials.push(r); } }); }
             if(cloudMaster.payroll) { cloudMaster.payroll.forEach(p => { let targetBiz = p.business; if(targetBiz === "SK Creations") targetBiz = "SK Crafts"; if(dataStore[targetBiz]) { dataStore[targetBiz].payroll.push(p); } }); }
 
-            if(cloudMaster.web_orders) { pendingWebOrders = cloudMaster.web_orders; }
+            // Web Orders Update & UI Render
+            if(cloudMaster.web_orders) { 
+                pendingWebOrders = cloudMaster.web_orders; 
+                renderWebOrders(); // 🔥 අලුත් ඕඩර්ස් පේජ් එක ලෝඩ් වෙද්දීම පෙන්නන්න මේක අනිවාර්යයි!
+            }
 
-            ensureDataStoreFallbacks(); updateNextCombinedInvoiceNumber(); reRenderEntireUI();
+            ensureDataStoreFallbacks(); 
+            updateNextCombinedInvoiceNumber(); 
+            reRenderEntireUI();
+            
             if(statusTextEl) statusTextEl.textContent = "🔐 Database Synced & Encrypted. Security Node Armed.";
+
+            // Auto Login
+            let savedSession = localStorage.getItem('sk_erp_session');
+            if(savedSession) {
+                try {
+                    let sData = JSON.parse(savedSession);
+                    document.getElementById('loginUser').value = sData.u;
+                    document.getElementById('loginPass').value = sData.p;
+                    setTimeout(() => attemptSystemAuthentication(), 800); 
+                } catch(e) { console.error("Session parse error"); }
+            }
+
+            // Real-time Sync Start
+            startAutoSync();
         })
         .catch(err => {
             console.error("Local DB Connection Failure Trace:", err);
             if(statusTextEl) statusTextEl.textContent = "⚠️ Database offline. Check if Node.js server is running.";
-            ensureDataStoreFallbacks(); updateNextCombinedInvoiceNumber(); reRenderEntireUI();
+            ensureDataStoreFallbacks(); 
+            updateNextCombinedInvoiceNumber(); 
+            reRenderEntireUI();
         });
 };
+// 🔥 2. තත්පර 15න් 15ට අලුත් Orders චෙක් කරන ෆන්ක්ෂන් එක 🔥
+function startAutoSync() {
+    setInterval(() => {
+        fetch(WEB_APP_URL)
+        .then(res => res.json())
+        .then(cloudMaster => {
+            if(cloudMaster.web_orders) { 
+                let oldOrderCount = pendingWebOrders.length;
+                pendingWebOrders = cloudMaster.web_orders;
+                
+                // අලුත් Order එකක් ඇවිත් නම්
+                if (pendingWebOrders.length > oldOrderCount) {
+                    Swal.fire({ 
+                        toast: true, position: 'top-end', icon: 'info', 
+                        title: '🔔 New Web Order Received!', 
+                        showConfirmButton: false, timer: 5000, 
+                        background: 'rgba(15,20,30,0.98)', color: '#D4AF37' 
+                    });
+                    try { 
+                        let audio = new Audio('https://www.soundjay.com/buttons/sounds/button-14.mp3'); 
+                        audio.play(); 
+                    } catch(e){} // සද්දෙ ප්ලේ කරනවා
+                }
+                renderWebOrders(); // UI එක Refresh නොකරම අප්ඩේට් කරනවා!
+            }
+        })
+        .catch(err => console.log("Silent sync skip"));
+    }, 15000); // තත්පර 15න් 15ට චෙක් කරයි
+}
 function ensureDataStoreFallbacks() {
     if(dataStore["SK Crafts"].stock.length === 0) { dataStore["SK Crafts"].stock = [{name:"Pipe Cleaner Flower Pot", qty:25, price:1500}, {name:"Resin Bookmark Craft", qty:14, price:850}]; }
     if(dataStore["SK Crafts"].customers.length === 0) { dataStore["SK Crafts"].customers = [{id:"C-101", name:"Walk-in Customer (Creations)", phone:"N/A", address:"Store Pickup"}]; }
@@ -817,6 +874,7 @@ function updateNextCombinedInvoiceNumber() {
     combNoEl.value = "COMB-" + (maxNum + 1);
 }
 
+// 🔥 3. Auto-Login මතක තියාගන්න හදපු Login ෆන්ක්ෂන් එක 🔥
 function attemptSystemAuthentication() {
     let u = document.getElementById('loginUser').value.trim().toLowerCase();
     let p = document.getElementById('loginPass').value;
@@ -825,6 +883,10 @@ function attemptSystemAuthentication() {
         currentUser = match.username; 
         activePermissions = match.perms; 
         currentRole = match.role || "STAFF";
+        
+        // Session එක බ්‍රවුසරේ Save කරනවා
+        localStorage.setItem('sk_erp_session', JSON.stringify({ u: currentUser, p: match.password }));
+        
         unlockSystemWorkspace();
     } else { alert("❌ Authentication Failed: Invalid Username or Password!"); }
 }
@@ -863,11 +925,15 @@ function unlockSystemWorkspace() {
     switchView('dashboard', document.getElementById('btn_dashboard'));
 }
 
+// 🔥 4. Logout වුණාම Session එක මකන ෆන්ක්ෂන් එක 🔥
 function logoutSystem() {
     let overlay = document.getElementById('loginOverlay'); let mainSys = document.getElementById('mainSystem');
     if(overlay) overlay.style.display = "flex"; if(mainSys) mainSys.style.display = "none";
     let statusTextEl = document.getElementById('loginStatusText'); if(statusTextEl) statusTextEl.textContent = "Session terminated. Enter credentials to rejoin matrix.";
     document.getElementById('loginUser').value = ""; document.getElementById('loginPass').value = "";
+    
+    // බ්‍රවුසරෙන් Session එක මකනවා
+    localStorage.removeItem('sk_erp_session');
 }
 
 function dispatchToCloud(payload) {
@@ -1039,30 +1105,46 @@ function generatePremiumInvoiceHTML(order, businessName) {
     let contactLine = "0749853510"; 
     let webLine = "www.skcreations.lk";
 
-    let baseTotal = parseFloat(order.total); let orderDiscount = parseFloat(order.discount || 0); let parsedPaid = parseFloat(order.paidAmount !== undefined ? order.paidAmount : baseTotal); let parsedBalance = parseFloat(order.balanceAmount || 0);
-    let statusText = parsedBalance > 0 ? "PARTIAL / ADVANCE" : "PAID"; let statusColor = parsedBalance > 0 ? "#ff9f43" : "#1dd1a1"; 
+    // 🔥 බැංකු විස්තර හැම ඉන්වොයිස් එකකම වැටෙනවා
+    let bankInfo = `
+        <div style="margin-top:20px; font-size:12px; color:#d4af37; border:1px dashed #d4af37; padding:10px; border-radius:8px; text-align:center;">
+            <b>Bank Details for Payment:</b> Commercial Bank | Acc No: 8590035371 | Name: T.S.K.C.Peiris | Branch: Moratuwa
+        </div>`;
+
+    let baseTotal = parseFloat(order.total); 
+    let orderDiscount = parseFloat(order.discount || 0); 
+    let parsedPaid = parseFloat(order.paidAmount !== undefined ? order.paidAmount : baseTotal); 
+    let parsedBalance = parseFloat(order.balanceAmount || 0);
+    
+    let statusText = parsedBalance > 0 ? "PARTIAL / ADVANCE" : "PAID"; 
+    let statusColor = parsedBalance > 0 ? "#ff9f43" : "#1dd1a1"; 
     if(order.isQuotation) { statusText = "DRAFT"; statusColor = "#f39c12"; }
 
     let tableRowsHTML = "";
     if (order.items && order.items.length > 0) { 
-        order.items.forEach(item => { let sub = (item.price * item.qty).toLocaleString('en-US', { minimumFractionDigits: 2 }); let itemNameDisplay = isCombined ? '[' + item.business.split(' ')[1] + '] ' + item.name : item.name; tableRowsHTML += '<tr style="border-bottom: 1px solid rgba(212, 175, 55, 0.2);"><td style="padding: 12px 16px; font-size: 14px; color: #fef0c3; font-weight: 600;">' + itemNameDisplay + '</td><td style="padding: 12px 16px; font-size: 14px; color: #fef0c3; text-align: right;">Rs. ' + parseFloat(item.price).toLocaleString('en-US', { minimumFractionDigits: 2 }) + '</td><td style="padding: 12px 16px; font-size: 14px; color: #fef0c3; text-align: center; font-weight: 700;">' + item.qty + '</td><td style="padding: 12px 16px; font-size: 14px; color: #d4af37; text-align: right; font-weight: 700;">Rs. ' + sub + '</td></tr>'; });
+        order.items.forEach(item => { 
+            let sub = (item.price * item.qty).toLocaleString('en-US', { minimumFractionDigits: 2 }); 
+            let itemNameDisplay = isCombined ? '[' + item.business.split(' ')[1] + '] ' + item.name : item.name; 
+            tableRowsHTML += `<tr style="border-bottom: 1px solid rgba(212, 175, 55, 0.2);"><td style="padding: 12px 16px; font-size: 14px; color: #fef0c3; font-weight: 600;">${itemNameDisplay}</td><td style="padding: 12px 16px; font-size: 14px; color: #fef0c3; text-align: right;">Rs. ${parseFloat(item.price).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td><td style="padding: 12px 16px; font-size: 14px; color: #fef0c3; text-align: center; font-weight: 700;">${item.qty}</td><td style="padding: 12px 16px; font-size: 14px; color: #d4af37; text-align: right; font-weight: 700;">Rs. ${sub}</td></tr>`; 
+        });
     } else {
-        let formattedPrice = (baseTotal / parseInt(order.qty || 1)).toLocaleString('en-US', { minimumFractionDigits: 2 }); tableRowsHTML = '<tr style="border-bottom: 1px solid rgba(212, 175, 55, 0.2);"><td style="padding: 16px; font-size: 15px; color: #fef0c3; font-weight: 600;">' + order.item + '</td><td style="padding: 16px; font-size: 15px; color: #fef0c3; text-align: right;">Rs. ' + formattedPrice + '</td><td style="padding: 16px; font-size: 15px; color: #fef0c3; text-align: center; font-weight: 700;">' + order.qty + '</td><td style="padding: 16px; font-size: 15px; color: #d4af37; text-align: right; font-weight: 700;">Rs. ' + baseTotal.toLocaleString('en-US', { minimumFractionDigits: 2 }) + '</td></tr>';
+        let formattedPrice = (baseTotal / parseInt(order.qty || 1)).toLocaleString('en-US', { minimumFractionDigits: 2 }); 
+        tableRowsHTML = `<tr style="border-bottom: 1px solid rgba(212, 175, 55, 0.2);"><td style="padding: 16px; font-size: 15px; color: #fef0c3; font-weight: 600;">${order.item}</td><td style="padding: 16px; font-size: 15px; color: #fef0c3; text-align: right;">Rs. ${formattedPrice}</td><td style="padding: 16px; font-size: 15px; color: #fef0c3; text-align: center; font-weight: 700;">${order.qty}</td><td style="padding: 16px; font-size: 15px; color: #d4af37; text-align: right; font-weight: 700;">Rs. ${baseTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td></tr>`;
     }
 
-    let discountHtmlRow = ""; if(orderDiscount > 0) { discountHtmlRow = `<div style="display: flex; justify-content: space-between; font-size: 14px; color: #e74c3c; padding-bottom: 8px; border-bottom: 1px dashed rgba(212, 175, 55, 0.2); font-weight: 600;"><span>Discount / Offers:</span><span style="font-weight: 700;">- Rs. ${orderDiscount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span></div>`; }
+    let discountHtmlRow = ""; 
+    if(orderDiscount > 0) { discountHtmlRow = `<div style="display: flex; justify-content: space-between; font-size: 14px; color: #e74c3c; padding-bottom: 8px; border-bottom: 1px dashed rgba(212, 175, 55, 0.2); font-weight: 600;"><span>Discount / Offers:</span><span style="font-weight: 700;">- Rs. ${orderDiscount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span></div>`; }
 
     let whatsappActionBtn = isCombined ? `<button onclick="sendCombinedWhatsAppInvoice('${order.id}')" class="btn" style="width: auto; padding: 12px 20px; font-size: 14px; background: #25D366; color: #111; border-radius: 8px; font-weight: 800; border: none; cursor: pointer; box-shadow: 0 4px 15px rgba(37,211,102,0.3);">💬 WhatsApp</button>` : `<button onclick="sendWhatsAppInvoice('${order.id}', '${businessName}')" class="btn" style="width: auto; padding: 12px 20px; font-size: 14px; background: #25D366; color: #111; border-radius: 8px; font-weight: 800; border: none; cursor: pointer; box-shadow: 0 4px 15px rgba(37,211,102,0.3);">💬 WhatsApp</button>`;
     if(order.isQuotation) whatsappActionBtn = ''; 
 
-    // MD කෙනෙක් ලොග් වෙලා නම් විතරක් Delete Button එක පෙන්නනවා
-    let adminActionBtn = '';
-    if (currentRole === 'MD') {
-        adminActionBtn = `<button onclick="deleteInvoiceLogic('${order.id}')" class="btn" style="width: auto; padding: 12px 20px; font-size: 14px; background: #e74c3c; color: #fff; border-radius: 8px; font-weight: 800; border: none; cursor: pointer; box-shadow: 0 4px 15px rgba(231,76,60,0.3);">🗑️ Delete Invoice</button>`;
-    }
+    let adminActionBtn = (currentRole === 'MD') ? `<button onclick="deleteInvoiceLogic('${order.id}')" class="btn" style="width: auto; padding: 12px 20px; font-size: 14px; background: #e74c3c; color: #fff; border-radius: 8px; font-weight: 800; border: none; cursor: pointer; box-shadow: 0 4px 15px rgba(231,76,60,0.3);">🗑️ Delete Invoice</button>` : '';
 
     let thPrice = order.isQuotation ? "UNIT RATE" : "UNIT PRICE";
     let thQty = order.isQuotation ? "ORDER QTY" : "QTY";
+
+    // 🔥 Address undefined ප්‍රශ්නය විසඳුවා
+    let shipToAddr = (order.address && order.address !== "TBA" && order.address !== "undefined") ? order.address : "Store Pickup / Not Provided";
 
     let invoiceHtml = `<div id="printAreaContainer_${order.id}" class="printable-invoice">
         <div>
@@ -1080,7 +1162,7 @@ function generatePremiumInvoiceHTML(order, businessName) {
                 <div style="flex: 1; background: rgba(15, 20, 30, 0.6); padding: 18px; border-radius: 10px; border: 1px solid rgba(212, 175, 55, 0.3);">
                     <h4 style="font-size: 11px; text-transform: uppercase; color: #d4af37; margin-bottom: 8px; letter-spacing: 1px; font-weight: 700;">Invoice To:</h4>
                     <p style="font-size: 17px; font-weight: 800; color: #fef0c3; margin-bottom: 4px;">${order.cust}</p>
-                    <p style="font-size: 13px; color: #fef0c3; line-height: 1.5; font-weight: 500;"><strong style="color:#d4af37;">Ship To:</strong> ${order.address}</p>
+                    <p style="font-size: 13px; color: #fef0c3; line-height: 1.5; font-weight: 500;"><strong style="color:#d4af37;">Ship To:</strong> ${shipToAddr}</p>
                 </div>
                 <div style="width: 260px; background: rgba(15, 20, 30, 0.6); padding: 18px; border-radius: 10px; border: 1px solid rgba(212, 175, 55, 0.3); display: flex; flex-direction: column; gap: 8px; justify-content: center;">
                     <p style="font-size: 13px; color: #d4af37; margin: 0; font-weight: 600;">Date: <span style="float: right; color: #fef0c3; font-weight: 700;">${order.date}</span></p>
@@ -1107,9 +1189,10 @@ function generatePremiumInvoiceHTML(order, businessName) {
                     <div style="display: flex; justify-content: space-between; font-size: 18px; color: #fef0c3; font-weight: 800; padding-top: 4px;"><span>Balance Due:</span><span style="color: #d4af37;">Rs. ${parsedBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span></div>
                 </div>
             </div>
+            ${bankInfo}
         </div>
         <div>
-            <div style="border-top: 1px solid rgba(212, 175, 55, 0.3); padding-top: 15px; text-align: center;">
+            <div style="border-top: 1px solid rgba(212, 175, 55, 0.3); padding-top: 15px; text-align: center; margin-top: 20px;">
                 <p style="font-size: 13px; font-weight: 700; color: #d4af37; margin: 0;">Thank you for your business!</p>
                 <p style="font-size: 11px; color: rgba(212, 175, 55, 0.6); margin-top: 4px; font-weight: 500;">This is a system generated official commercial invoice receipt.</p>
             </div>
@@ -1132,38 +1215,80 @@ function generatePremiumInvoiceHTML(order, businessName) {
     return invoiceHtml;
 }
 
-// 2. DOWNLOAD PDF බටන් එක (මේකෙන් කළු පාට ලුක් එක එහෙම්මම එනවා)
+// 📥 100% BUG-FREE PDF DOWNLOADER 🔥 (Black Box Issue Fixed!)
 function downloadInvoicePDF(invoiceId) {
-    const element = document.getElementById(`printAreaContainer_${invoiceId}`);
-    if (!element) { 
-        alert("Error: Invoice container not found."); 
+    Swal.fire({ 
+        title: 'Generating PDF...', 
+        text: 'Please wait a moment while we process the document.', 
+        allowOutsideClick: false, 
+        background: 'rgba(15,20,30,0.98)',
+        color: '#D4AF37',
+        didOpen: () => { Swal.showLoading(); } 
+    });
+
+    const originalElement = document.getElementById(`printAreaContainer_${invoiceId}`);
+    if (!originalElement) { 
+        Swal.fire('Error', 'Invoice container not found.', 'error'); 
         return; 
     }
 
-    // PDF එක හදද්දී ප්‍රින්ට් බට්න් එක හංගනවා
-    const printBtns = element.querySelector('.print-btn-class');
-    if (printBtns) printBtns.style.display = 'none';
+    // 1. ඇස් ඉස්සරහා තියෙන එකේ කොපියක් ගන්නවා
+    const clonedElement = originalElement.cloneNode(true);
 
+    // 2. ප්‍රින්ට් බටන් ටික PDF එකට එන්නෙ නැති වෙන්න මකනවා
+    const printBtns = clonedElement.querySelector('.print-btn-class');
+    if (printBtns) printBtns.remove();
+
+    // 3. 🔥 THE SECRET FIX 🔥
+    // Scroll එක නිසා කළු කොටු එන එක නවත්තන්න, කොපිය අරන් අලුත් Wrapper එකක දාලා Page එකේ උඩම මුල්ලට තියනවා. 
+    // හැබැයි z-index: -9999 නිසා ඔයාට ඒක පේන්නේ නෑ, සිස්ටම් එකට විතරයි පේන්නේ!
+    const wrapper = document.createElement('div');
+    wrapper.style.position = 'absolute';
+    wrapper.style.top = '0px';
+    wrapper.style.left = '0px';
+    wrapper.style.width = '210mm'; // හරියටම A4 සයිස් එක
+    wrapper.style.backgroundColor = '#0a0a0a';
+    wrapper.style.zIndex = '-9999'; 
+    
+    wrapper.appendChild(clonedElement);
+    document.body.appendChild(wrapper);
+
+    // 4. PDF සෙටින්ග්ස්
     var opt = {
-        margin: 5,
-        filename: `${invoiceId}_Invoice.pdf`,
-        image: { type: 'jpeg', quality: 1 },
-        html2canvas: { 
+        margin:       [10, 10, 10, 10], 
+        filename:     `${invoiceId}_SK_Creations.pdf`,
+        image:        { type: 'jpeg', quality: 1.0 },
+        html2canvas:  { 
             scale: 2, 
             useCORS: true, 
-            // මෙතන අනිවාර්යයෙන්ම #0a0a0a තියෙන්න ඕනේ, එතකොට තමයි කළු පාට එන්නේ
-            backgroundColor: '#0a0a0a' 
+            backgroundColor: '#0a0a0a',
+            scrollY: 0, // 🔥 අනිවාර්යයි: මේකෙන් තමයි Scroll අවුල හදන්නේ! 🔥
+            scrollX: 0
         },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
-    // PDF එක Save කරනවා
-    html2pdf().set(opt).from(element).save().then(() => {
-        // වැඩේ ඉවර වුණාම බට්න් එක ආයේ පෙන්නනවා
-        if (printBtns) printBtns.style.display = 'flex';
+    // 5. PDF එක ගහලා ඉවර වුණාම අර හැංගුව Wrapper එක මකලා දානවා
+    html2pdf().set(opt).from(clonedElement).save().then(() => {
+        document.body.removeChild(wrapper); 
+        Swal.close();
+        
+        Swal.fire({ 
+            title: 'Success!', 
+            text: 'PDF downloaded successfully.', 
+            icon: 'success', 
+            toast: true, 
+            position: 'top-end', 
+            showConfirmButton: false, 
+            timer: 3000,
+            background: 'rgba(15,20,30,0.98)',
+            color: '#D4AF37'
+        });
     }).catch(err => {
         console.error("PDF Error:", err);
-        if (printBtns) printBtns.style.display = 'flex';
+        document.body.removeChild(wrapper);
+        Swal.close();
+        Swal.fire('Error', 'Failed to generate PDF.', 'error');
     });
 }
 // 1. PRINT/PDF DOCUMENT බටන් එක (මේකෙන් සුදු පසුබිම එනවා)
@@ -1204,14 +1329,59 @@ function exportExpensesToExcel() {
 }
 
 function sendWhatsAppInvoice(orderId, businessName) {
-    let orderRows = dataStore[businessName].orders.filter(o => o.id === orderId); if(!orderRows || orderRows.length === 0) return;
-    let baseOrder = orderRows[0]; let customer = dataStore[businessName].customers.find(c => c.name === baseOrder.cust); let phone = customer ? customer.phone : ""; let formattedPhone = phone.replace(/[^0-9]/g, ''); if (formattedPhone.startsWith('0')) formattedPhone = '94' + formattedPhone.substring(1);
-    if(!formattedPhone || phone === "N/A") { let userPhone = prompt("Customer phone number ekak natha. Karunakarala WhatsApp number eka thahawuru karanna:", "07"); if(!userPhone) return; formattedPhone = userPhone.replace(/[^0-9]/g, ''); if (formattedPhone.startsWith('0')) formattedPhone = '94' + formattedPhone.substring(1); }
-    let itemsString = ""; let grandTotal = 0; orderRows.forEach(i => { itemsString += "• " + i.item + " (" + i.qty + " Pcs) -> Rs. " + parseFloat(i.total).toLocaleString() + "\n"; grandTotal += parseFloat(i.total); });
-    let dis = parseFloat(baseOrder.discount || 0); let finalNet = grandTotal - dis; let bal = parseFloat(baseOrder.balanceAmount || 0); let paidLabel = bal > 0 ? "*Paid Advance:*" : "*Paid Amount:*"; 
+    let orderRows = dataStore[businessName].orders.filter(o => o.id === orderId);
+    if(orderRows.length === 0) return;
+
+    let baseOrder = orderRows[0];
+    let custName = baseOrder.cust;
+    let customer = dataStore[businessName].customers.find(c => c.name.trim() === custName.trim());
+    
+    // නම්බර් එක අරගන්නා ආකාරය
+    let formattedPhone = "";
+    if(!customer || customer.phone === "N/A") {
+        let userPhone = prompt("Customer phone number not found. Enter WhatsApp number (Ex: 077...):");
+        if(!userPhone) return;
+        formattedPhone = userPhone.replace(/[^0-9]/g, '');
+        if(formattedPhone.startsWith('0')) formattedPhone = '94' + formattedPhone.substring(1);
+    } else {
+        formattedPhone = customer.phone.replace(/[^0-9]/g, '');
+        if(formattedPhone.startsWith('0')) formattedPhone = '94' + formattedPhone.substring(1);
+    }
+
+    // මැසේජ් එක ලස්සනට හදමු
+    let itemsString = ""; 
+    let grandTotal = 0; 
+    orderRows.forEach(i => { 
+        itemsString += "• " + i.item + " (" + i.qty + " Pcs) -> Rs. " + parseFloat(i.total).toLocaleString() + "\n"; 
+        grandTotal += parseFloat(i.total); 
+    });
+
+    let dis = parseFloat(baseOrder.discount || 0); 
+    let finalNet = grandTotal - dis; 
+    let bal = parseFloat(baseOrder.balanceAmount || 0); 
+    let paidLabel = bal > 0 ? "*Paid Advance:*" : "*Paid Amount:*"; 
+    
     let disString = dis > 0 ? `*Sub Total:* Rs. ${grandTotal.toLocaleString()}\n*Discount / Offers:* - Rs. ${dis.toLocaleString()}\n*Net Bill:* Rs. ${finalNet.toLocaleString()}\n` : `*Total Bill:* Rs. ${grandTotal.toLocaleString()}\n`;
-    let message = "*" + businessName.toUpperCase() + " - INVOICE*\n-----------------------------------\n*Invoice No:* " + baseOrder.id + "\n*Date:* " + baseOrder.date + "\n*Customer:* " + baseOrder.cust + "\n-----------------------------------\n*Purchased Items:*\n" + itemsString + "-----------------------------------\n" + disString + paidLabel + " Rs. " + parseFloat(baseOrder.paidAmount || 0).toLocaleString() + "\n*Balance Due:* Rs. " + bal.toLocaleString() + "\n-----------------------------------\nThank you for your business! ❤️";
-    window.open("https://api.whatsapp.com/send?phone=" + formattedPhone + "&text=" + encodeURIComponent(message), '_blank');
+
+    let message = `*${businessName.toUpperCase()} - INVOICE*\n` +
+                  `-----------------------------------\n` +
+                  `*Invoice No:* ${baseOrder.id}\n` +
+                  `*Date:* ${baseOrder.date}\n` +
+                  `*Customer:* ${baseOrder.cust}\n` +
+                  `-----------------------------------\n` +
+                  `*Purchased Items:*\n${itemsString}` +
+                  `-----------------------------------\n` +
+                  `${disString}` +
+                  `${paidLabel} Rs. ${parseFloat(baseOrder.paidAmount || 0).toLocaleString()}\n` +
+                  `*Balance Due:* Rs. ${bal.toLocaleString()}\n` +
+                  `-----------------------------------\n` +
+                  `*💳 BANK DETAILS FOR PAYMENT:*\n` +
+                  `Bank: Commercial Bank\nAcc No: 8590035371\nName: T.S.K.C.Peiris\nBranch: Moratuwa\n` +
+                  `-----------------------------------\n` +
+                  `Thank you for your business! ❤️`;
+
+    // WhatsApp එකට යවනවා
+    window.open(`https://wa.me/${formattedPhone}?text=${encodeURIComponent(message)}`, '_blank');
 }
 
 function sendCombinedWhatsAppInvoice(orderId) {
@@ -2326,15 +2496,14 @@ function renderWebOrders() {
     });
 }
 
-// 🌐 Order එක Accept කරලා Auto-Invoice ගහන ස්මාර්ට් ෆන්ක්ෂන් එක (Error-Proof & Payment Ready)
+// 🌐 Order එක Accept කරලා Auto-Invoice ගහන ස්මාර්ට් ෆන්ක්ෂන් එක
 function acceptWebOrder(idx) {
+    if (typeof Swal === 'undefined') { alert("SweetAlert not loaded!"); return; }
+
     try {
         let order = pendingWebOrders[idx];
-        if(!order) return;
+        if(!order) { alert("Order not found!"); return; }
         
-        let phone = order.phone ? String(order.phone).replace(/[^0-9]/g, '') : "";
-        if (phone.startsWith('0')) phone = '94' + phone.substring(1);
-
         let parsedItems = [];
         try { parsedItems = typeof order.items === 'string' ? JSON.parse(order.items) : order.items; } catch (e) { }
         if (!Array.isArray(parsedItems)) parsedItems = [parsedItems];
@@ -2347,171 +2516,90 @@ function acceptWebOrder(idx) {
         let calculatedTotal = 0;
         
         actualItemsList.forEach(item => {
-            if(!item) return;
-            let iName = ""; let iQty = 1; let unitPrice = 0; let foundBiz = "";
-
-            if (typeof item === 'object' && item.name) {
-                iName = item.name; iQty = parseInt(item.qty) || 1; unitPrice = parseFloat(item.price) || 0; foundBiz = item.business || "";
-            } else {
-                let cleanStr = String(item).replace(/\[|\]|"/g, ''); 
-                let parts = cleanStr.split(' x '); 
-                iName = parts[0] ? parts[0].trim() : "Unknown Item";
-                iQty = parts[1] ? parseInt(parts[1]) : 1;
-            }
-
-            if (!foundBiz || foundBiz === "") {
-                let tempBiz = "SK Crafts";
-                ["SK Crafts", "SK Fashion", "SK Digital"].forEach(b => {
-                    let match = dataStore[b].stock.find(s => s.name.trim().toLowerCase() === iName.trim().toLowerCase());
-                    if (match) { tempBiz = b; if (unitPrice === 0) unitPrice = parseFloat(match.price) || 0; }
-                });
-                foundBiz = tempBiz;
-            } else {
-                if(dataStore[foundBiz]) {
-                    let match = dataStore[foundBiz].stock.find(s => s.name.trim().toLowerCase() === iName.trim().toLowerCase());
-                    if (match && unitPrice === 0) unitPrice = parseFloat(match.price) || 0;
-                }
-            }
+            let iName = item.name || "Unknown";
+            let iQty = parseInt(item.qty) || 1;
+            let unitPrice = parseFloat(item.price) || 0;
+            let foundBiz = item.business || "SK Crafts";
             
             involvedBusinesses.add(foundBiz);
-            let itemTotal = unitPrice * iQty;
-            calculatedTotal += itemTotal;
-            formattedOrderItems.push({ business: foundBiz, name: iName, price: unitPrice, qty: iQty, total: itemTotal });
+            calculatedTotal += (unitPrice * iQty);
+            formattedOrderItems.push({ business: foundBiz, name: iName, price: unitPrice, qty: iQty, total: (unitPrice * iQty) });
         });
-
-        let defaultPaid = meta.method === "Bank Transfer" ? calculatedTotal : 0;
 
         Swal.fire({
             title: 'Configure Invoice Payment',
             html: `
                 <div style="text-align:left; font-size:14px; color:#fef0c3;">
-                    <p style="margin-bottom:15px; color:#D4AF37; font-weight:bold;">Total Bill Amount: Rs. ${calculatedTotal}</p>
-                    <label>Payment Method:</label>
-                    <select id="erp-method" class="swal2-input" style="width:100%; margin-top:5px; margin-bottom:15px;">
-                        <option value="COD" ${meta.method === 'COD' ? 'selected' : ''}>COD</option>
-                        <option value="Bank Transfer" ${meta.method === 'Bank Transfer' ? 'selected' : ''}>Bank Transfer</option>
-                    </select>
-                    <label>Paid Amount (Advance) Rs:</label>
-                    <input type="number" id="erp-paid" class="swal2-input" value="${defaultPaid}" style="width:100%; margin-top:5px; margin-bottom:15px;">
+                    <p style="margin-bottom:15px; color:#D4AF37; font-weight:bold;">Total Amount: Rs. ${calculatedTotal}</p>
+                    <label>Method:</label>
+                    <select id="erp-method" class="swal2-input" style="width:100%;"><option value="COD" ${meta.method === 'COD' ? 'selected' : ''}>COD</option><option value="Bank Transfer" ${meta.method === 'Bank Transfer' ? 'selected' : ''}>Bank Transfer</option></select>
+                    <label>Paid Amount (Rs):</label>
+                    <input type="number" id="erp-paid" class="swal2-input" value="${meta.method === 'Bank Transfer' ? calculatedTotal : 0}" style="width:100%;">
                     <label>Discount (Rs):</label>
-                    <input type="number" id="erp-discount" class="swal2-input" value="0" style="width:100%; margin-top:5px;">
+                    <input type="number" id="erp-discount" class="swal2-input" value="0" style="width:100%;">
                 </div>
             `,
-            showCancelButton: true,
             confirmButtonText: 'Generate Invoice',
-            confirmButtonColor: '#25D366',
-            cancelButtonColor: '#e74c3c',
             background: 'rgba(15,20,30,0.98)',
             color: '#D4AF37',
-            preConfirm: () => {
-                return {
-                    method: document.getElementById('erp-method').value,
-                    paid: parseFloat(document.getElementById('erp-paid').value) || 0,
-                    discount: parseFloat(document.getElementById('erp-discount').value) || 0
-                }
-            }
+            preConfirm: () => ({
+                method: document.getElementById('erp-method').value,
+                paid: parseFloat(document.getElementById('erp-paid').value) || 0,
+                discount: parseFloat(document.getElementById('erp-discount').value) || 0
+            })
         }).then((result) => {
             if (result.isConfirmed) {
                 let userConfig = result.value;
-                let finalNet = calculatedTotal - userConfig.discount;
-                let finalBalance = finalNet - userConfig.paid;
-                if(finalBalance < 0) finalBalance = 0;
-
-                formattedOrderItems.forEach(item => {
-                    if(dataStore[item.business]) {
-                        let stockMatch = dataStore[item.business].stock.find(s => s.name.trim().toLowerCase() === item.name.trim().toLowerCase());
-                        if (stockMatch) {
-                            stockMatch.qty -= item.qty;
-                            dispatchToCloud({ action: "saveStock", business: item.business, name: stockMatch.name, qty: stockMatch.qty, price: stockMatch.price });
-                        } else {
-                            dispatchToCloud({ action: "saveStock", business: item.business, name: item.name, qty: -item.qty, price: item.price });
-                            dataStore[item.business].stock.push({name: item.name, qty: -item.qty, price: item.price});
-                        }
-                    }
-                });
-
                 let isComb = involvedBusinesses.size > 1;
                 let targetBiz = isComb ? "SK Creations" : Array.from(involvedBusinesses)[0];
-                if(!targetBiz) targetBiz = "SK Crafts";
-                
                 let prefix = isComb ? "COMB" : (targetBiz === "SK Crafts" ? "SKC" : targetBiz === "SK Fashion" ? "SKF" : "SKD");
+                
                 let maxNum = 1000;
-                
-                if (isComb) {
-                    ["SK Crafts", "SK Fashion", "SK Digital"].forEach(b => {
-                        if(dataStore[b] && dataStore[b].orders) {
-                            dataStore[b].orders.forEach(o => { if (o.id && o.id.toUpperCase().startsWith("COMB-")) { let num = parseInt(o.id.split('-')[1]); if (!isNaN(num) && num > maxNum) maxNum = num; } });
-                        }
-                    });
-                } else {
-                    if(dataStore[targetBiz] && dataStore[targetBiz].orders) {
-                        dataStore[targetBiz].orders.forEach(o => { if (o.id && o.id.toUpperCase().startsWith(prefix + "-")) { let num = parseInt(o.id.split('-')[1]); if (!isNaN(num) && num > maxNum) maxNum = num; } });
+                ["SK Crafts", "SK Fashion", "SK Digital"].forEach(b => {
+                    if(dataStore[b] && dataStore[b].orders) {
+                        dataStore[b].orders.forEach(o => {
+                            if(o.id && o.id.includes(prefix)) { let n = parseInt(o.id.split('-')[1]); if(!isNaN(n) && n > maxNum) maxNum = n; }
+                        });
                     }
-                }
-                
+                });
                 let newInvId = prefix + "-" + (maxNum + 1);
-                let orderDate = new Date().toISOString().split('T')[0];
 
-                let orderData = { 
-                    action: "saveOrder", id: newInvId, date: orderDate, cust: order.customer_name || "Unknown", address: order.address || "TBA", 
-                    total: calculatedTotal, discount: userConfig.discount, paidAmount: userConfig.paid, balanceAmount: finalBalance, method: userConfig.method, status: "Pending", business: targetBiz, items: formattedOrderItems 
-                };
+                // 1. Customer Hub එකට සේව් කරලා Cloud එකට යැවීම
+                let cBiz = targetBiz === "SK Creations" ? "SK Crafts" : targetBiz;
+                let custObj = { id: "C-" + Date.now().toString().slice(-4), name: order.customer_name, phone: order.phone, address: order.address };
                 
+                if(!dataStore[cBiz].customers.find(c => c.phone === order.phone)) {
+                    dataStore[cBiz].customers.push(custObj);
+                    dispatchToCloud({ action: "saveCustomer", business: cBiz, ...custObj });
+                }
+
+                // 2. Order එක Save කරලා Cloud එකට යැවීම
                 formattedOrderItems.forEach(item => {
-                    let pushBiz = isComb ? item.business : targetBiz;
-                    if(dataStore[pushBiz]) {
-                        dataStore[pushBiz].orders.push({ id: newInvId, date: orderDate, cust: order.customer_name || "Unknown", address: order.address || "TBA", item: item.name, qty: item.qty, total: item.total, discount: userConfig.discount, paidAmount: userConfig.paid, balanceAmount: finalBalance, method: userConfig.method, status: "Pending" });
+                    let orderEntry = { id: newInvId, date: new Date().toISOString().split('T')[0], cust: order.customer_name, item: item.name, qty: item.qty, total: item.total, method: userConfig.method, status: "Pending" };
+                    dataStore[item.business].orders.push(orderEntry);
+                    dispatchToCloud({ action: "saveOrder", business: item.business, ...orderEntry });
+                    
+                    let stockMatch = dataStore[item.business].stock.find(s => s.name.trim().toLowerCase() === item.name.trim().toLowerCase());
+                    if (stockMatch) {
+                        stockMatch.qty -= item.qty;
+                        dispatchToCloud({ action: "saveStock", business: item.business, name: stockMatch.name, qty: stockMatch.qty, price: stockMatch.price });
                     }
                 });
 
-                dispatchToCloud(orderData);
-
-                let cBiz = targetBiz === "SK Creations" ? "SK Crafts" : targetBiz;
-                if(dataStore[cBiz]) {
-                    let existingCust = dataStore[cBiz].customers.find(c => c.phone === order.phone || c.name === order.customer_name);
-                    if (!existingCust) {
-                         let nId = "C-" + (dataStore[cBiz].customers.length + 101); 
-                         let customerObj = { id: nId, name: order.customer_name || "Unknown", phone: order.phone || "N/A", address: order.address || "TBA" }; 
-                         dataStore[cBiz].customers.push(customerObj); 
-                         dispatchToCloud({ action: "saveCustomer", business: cBiz, ...customerObj }); 
-                    }
-                }
-
-                let msg = `*SK CREATIONS - ORDER ACCEPTED ✅*\n-----------------------------------\nHi ${order.customer_name || ""},\n\nWe have accepted your order and it's now in our Production Queue. 🏭\n\n*Your Official Invoice No:* ${newInvId}\n*Payment Received:* Rs. ${userConfig.paid.toLocaleString()}\n\nWe will prepare your items and notify you once they are ready for dispatch to:\n📍 ${order.address || ""}\n\nThank you for choosing SK Creations! ✨`;
-
-                if(phone) {
-                    window.open("https://api.whatsapp.com/send?phone=" + phone + "&text=" + encodeURIComponent(msg), '_blank');
-                }
-
+                // 3. Web Order Status Update
                 dispatchToCloud({ action: "updateWebOrderStatus", order_no: order.order_no, status: "Accepted" });
-                pendingWebOrders.splice(idx, 1);
                 
-                currentBusiness = cBiz; 
-                let topSwitcherBtns = document.querySelectorAll('.hub-btn');
-                if (topSwitcherBtns.length > 0) {
-                    topSwitcherBtns.forEach(b => {
-                        b.classList.remove('active');
-                        if(b.getAttribute('data-biz') === currentBusiness) b.classList.add('active');
-                    });
-                }
+                // 4. WhatsApp
+                let msg = `*SK CREATIONS - ORDER ACCEPTED ✅*\nInvoice: ${newInvId}\nName: ${order.customer_name}\nTotal: Rs.${calculatedTotal}\n\n*Bank: Commercial Bank | Acc: 8590035371 | Name: T.S.K.C.Peiris*`;
+                window.open(`https://wa.me/${order.phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(msg)}`, '_blank');
 
+                pendingWebOrders.splice(idx, 1);
+                alert("✅ Invoice Activated & Synced!");
                 reRenderEntireUI();
                 renderWebOrders();
-                
-                Swal.fire({
-                    title: 'Order Activated!',
-                    text: `Invoice ${newInvId} generated successfully.`,
-                    icon: 'success',
-                    background: 'rgba(15,20,30,0.98)',
-                    color: '#D4AF37',
-                    confirmButtonColor: '#25D366'
-                });
             }
         });
-    } catch(err) {
-        console.error(err);
-        alert("Error mapping order data: " + err.message);
-    }
+    } catch(err) { console.error(err); alert("Error: " + err.message); }
 }
 </script>
 </body>
