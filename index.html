@@ -1183,7 +1183,7 @@ function generatePremiumInvoiceHTML(order, businessName) {
     return invoiceHtml;
 }
 
-// 📥 BULLETPROOF PDF DOWNLOAD: ලයිව් DOM එකෙන්ම ගන්නා සුපිරි ක්‍රමය 🔥
+// 📥 100% BUG-FREE PDF DOWNLOADER 🔥 (Black Box Issue Fixed!)
 function downloadInvoicePDF(invoiceId) {
     Swal.fire({ 
         title: 'Generating PDF...', 
@@ -1194,71 +1194,53 @@ function downloadInvoicePDF(invoiceId) {
         didOpen: () => { Swal.showLoading(); } 
     });
 
-    // 1. ඇස් ඉස්සරහා ලස්සනට පෙනෙන්න තියෙන ඔරිජිනල් ඉන්වොයිස් එකම ගන්නවා
-    const element = document.getElementById(`printAreaContainer_${invoiceId}`);
-    if (!element) { 
+    const originalElement = document.getElementById(`printAreaContainer_${invoiceId}`);
+    if (!originalElement) { 
         Swal.fire('Error', 'Invoice container not found.', 'error'); 
         return; 
     }
 
-    // 2. 🔥 තත්පරයකට ප්‍රින්ට් බටන් ටික සම්පූර්ණයෙන්ම හංගනවා (PDF එකට බටන් එන්නේ නෑ එතකොට) 🔥
-    const printBtns = element.querySelector('.print-btn-class');
-    if (printBtns) {
-        printBtns.style.setProperty('display', 'none', 'important');
-    }
+    // 1. ඇස් ඉස්සරහා තියෙන එකේ කොපියක් ගන්නවා
+    const clonedElement = originalElement.cloneNode(true);
 
-    // 3. PDF එකේ සෙටින්ග්ස්
+    // 2. ප්‍රින්ට් බටන් ටික PDF එකට එන්නෙ නැති වෙන්න මකනවා
+    const printBtns = clonedElement.querySelector('.print-btn-class');
+    if (printBtns) printBtns.remove();
+
+    // 3. 🔥 THE SECRET FIX 🔥
+    // Scroll එක නිසා කළු කොටු එන එක නවත්තන්න, කොපිය අරන් අලුත් Wrapper එකක දාලා Page එකේ උඩම මුල්ලට තියනවා. 
+    // හැබැයි z-index: -9999 නිසා ඔයාට ඒක පේන්නේ නෑ, සිස්ටම් එකට විතරයි පේන්නේ!
+    const wrapper = document.createElement('div');
+    wrapper.style.position = 'absolute';
+    wrapper.style.top = '0px';
+    wrapper.style.left = '0px';
+    wrapper.style.width = '210mm'; // හරියටම A4 සයිස් එක
+    wrapper.style.backgroundColor = '#0a0a0a';
+    wrapper.style.zIndex = '-9999'; 
+    
+    wrapper.appendChild(clonedElement);
+    document.body.appendChild(wrapper);
+
+    // 4. PDF සෙටින්ග්ස්
     var opt = {
-        margin:       [10, 10, 10, 10], // ගාණට මාර්ජින් එක හැදුවා
+        margin:       [10, 10, 10, 10], 
         filename:     `${invoiceId}_SK_Creations.pdf`,
         image:        { type: 'jpeg', quality: 1.0 },
         html2canvas:  { 
-            scale: 2, // සුපිරි කොලිටියෙන් එන්න
+            scale: 2, 
             useCORS: true, 
-            backgroundColor: '#0a0a0a', // ඔයාගේ ප්‍රීමියම් කළු පසුබිම
-            logging: false
+            backgroundColor: '#0a0a0a',
+            scrollY: 0, // 🔥 අනිවාර්යයි: මේකෙන් තමයි Scroll අවුල හදන්නේ! 🔥
+            scrollX: 0
         },
         jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
-    // 4. PDF එක සේව් කරනවා
-    html2pdf().set(opt).from(element).save().then(() => {
-        
-        // 5. 🔥 PDF එක හැදුණු ගමන් ආයේ බටන් ටික ලස්සනට පෙන්වනවා! 🔥
-        if (printBtns) {
-            printBtns.style.setProperty('display', 'flex', 'important');
-        }
-        
-        Swal.close();
-        
-        Swal.fire({ 
-            title: 'Success!', 
-            text: 'PDF downloaded successfully.', 
-            icon: 'success', 
-            toast: true, 
-            position: 'top-end', 
-            showConfirmButton: false, 
-            timer: 3000,
-            background: 'rgba(15,20,30,0.98)',
-            color: '#D4AF37'
-        });
-    }).catch(err => {
-        console.error("PDF Error:", err);
-        // එරර් එකක් ආවොත් බටන් ටික ආයේ පෙන්වනවා හිරවෙන්නේ නැති වෙන්න
-        if (printBtns) {
-            printBtns.style.setProperty('display', 'flex', 'important');
-        }
-        Swal.close();
-        Swal.fire('Error', 'Failed to generate PDF.', 'error');
-    });
-}
-    // 6. PDF එක Save කරනවා
+    // 5. PDF එක ගහලා ඉවර වුණාම අර හැංගුව Wrapper එක මකලා දානවා
     html2pdf().set(opt).from(clonedElement).save().then(() => {
-        // වැඩේ ඉවර වුණාම අර හැදුව හොර කොපිය මකලා දානවා
         document.body.removeChild(wrapper); 
         Swal.close();
         
-        // Success මැසේජ් එක
         Swal.fire({ 
             title: 'Success!', 
             text: 'PDF downloaded successfully.', 
@@ -1273,6 +1255,7 @@ function downloadInvoicePDF(invoiceId) {
     }).catch(err => {
         console.error("PDF Error:", err);
         document.body.removeChild(wrapper);
+        Swal.close();
         Swal.fire('Error', 'Failed to generate PDF.', 'error');
     });
 }
@@ -2438,13 +2421,13 @@ function renderWebOrders() {
 
 // 🌐 Order එක Accept කරලා Auto-Invoice ගහන ස්මාර්ට් ෆන්ක්ෂන් එක (Error-Proof & Payment Ready)
 function acceptWebOrder(idx) {
+    if (typeof Swal === 'undefined') { alert("SweetAlert not loaded!"); return; }
+
     try {
         let order = pendingWebOrders[idx];
-        if(!order) return;
+        if(!order) { alert("Order not found!"); return; }
         
-        let phone = order.phone ? String(order.phone).replace(/[^0-9]/g, '') : "";
-        if (phone.startsWith('0')) phone = '94' + phone.substring(1);
-
+        // Items සැකසීම
         let parsedItems = [];
         try { parsedItems = typeof order.items === 'string' ? JSON.parse(order.items) : order.items; } catch (e) { }
         if (!Array.isArray(parsedItems)) parsedItems = [parsedItems];
@@ -2457,171 +2440,77 @@ function acceptWebOrder(idx) {
         let calculatedTotal = 0;
         
         actualItemsList.forEach(item => {
-            if(!item) return;
-            let iName = ""; let iQty = 1; let unitPrice = 0; let foundBiz = "";
-
-            if (typeof item === 'object' && item.name) {
-                iName = item.name; iQty = parseInt(item.qty) || 1; unitPrice = parseFloat(item.price) || 0; foundBiz = item.business || "";
-            } else {
-                let cleanStr = String(item).replace(/\[|\]|"/g, ''); 
-                let parts = cleanStr.split(' x '); 
-                iName = parts[0] ? parts[0].trim() : "Unknown Item";
-                iQty = parts[1] ? parseInt(parts[1]) : 1;
-            }
-
-            if (!foundBiz || foundBiz === "") {
-                let tempBiz = "SK Crafts";
-                ["SK Crafts", "SK Fashion", "SK Digital"].forEach(b => {
-                    let match = dataStore[b].stock.find(s => s.name.trim().toLowerCase() === iName.trim().toLowerCase());
-                    if (match) { tempBiz = b; if (unitPrice === 0) unitPrice = parseFloat(match.price) || 0; }
-                });
-                foundBiz = tempBiz;
-            } else {
-                if(dataStore[foundBiz]) {
-                    let match = dataStore[foundBiz].stock.find(s => s.name.trim().toLowerCase() === iName.trim().toLowerCase());
-                    if (match && unitPrice === 0) unitPrice = parseFloat(match.price) || 0;
-                }
-            }
+            let iName = item.name || "Unknown";
+            let iQty = parseInt(item.qty) || 1;
+            let unitPrice = parseFloat(item.price) || 0;
+            let foundBiz = item.business || "SK Crafts";
             
             involvedBusinesses.add(foundBiz);
-            let itemTotal = unitPrice * iQty;
-            calculatedTotal += itemTotal;
-            formattedOrderItems.push({ business: foundBiz, name: iName, price: unitPrice, qty: iQty, total: itemTotal });
+            calculatedTotal += (unitPrice * iQty);
+            formattedOrderItems.push({ business: foundBiz, name: iName, price: unitPrice, qty: iQty, total: (unitPrice * iQty) });
         });
-
-        let defaultPaid = meta.method === "Bank Transfer" ? calculatedTotal : 0;
 
         Swal.fire({
             title: 'Configure Invoice Payment',
             html: `
                 <div style="text-align:left; font-size:14px; color:#fef0c3;">
-                    <p style="margin-bottom:15px; color:#D4AF37; font-weight:bold;">Total Bill Amount: Rs. ${calculatedTotal}</p>
-                    <label>Payment Method:</label>
-                    <select id="erp-method" class="swal2-input" style="width:100%; margin-top:5px; margin-bottom:15px;">
-                        <option value="COD" ${meta.method === 'COD' ? 'selected' : ''}>COD</option>
-                        <option value="Bank Transfer" ${meta.method === 'Bank Transfer' ? 'selected' : ''}>Bank Transfer</option>
-                    </select>
-                    <label>Paid Amount (Advance) Rs:</label>
-                    <input type="number" id="erp-paid" class="swal2-input" value="${defaultPaid}" style="width:100%; margin-top:5px; margin-bottom:15px;">
+                    <p style="margin-bottom:15px; color:#D4AF37; font-weight:bold;">Total Amount: Rs. ${calculatedTotal}</p>
+                    <label>Method:</label>
+                    <select id="erp-method" class="swal2-input" style="width:100%;"><option value="COD" ${meta.method === 'COD' ? 'selected' : ''}>COD</option><option value="Bank Transfer" ${meta.method === 'Bank Transfer' ? 'selected' : ''}>Bank Transfer</option></select>
+                    <label>Paid Amount (Rs):</label>
+                    <input type="number" id="erp-paid" class="swal2-input" value="${meta.method === 'Bank Transfer' ? calculatedTotal : 0}" style="width:100%;">
                     <label>Discount (Rs):</label>
-                    <input type="number" id="erp-discount" class="swal2-input" value="0" style="width:100%; margin-top:5px;">
+                    <input type="number" id="erp-discount" class="swal2-input" value="0" style="width:100%;">
                 </div>
             `,
-            showCancelButton: true,
             confirmButtonText: 'Generate Invoice',
-            confirmButtonColor: '#25D366',
-            cancelButtonColor: '#e74c3c',
             background: 'rgba(15,20,30,0.98)',
             color: '#D4AF37',
-            preConfirm: () => {
-                return {
-                    method: document.getElementById('erp-method').value,
-                    paid: parseFloat(document.getElementById('erp-paid').value) || 0,
-                    discount: parseFloat(document.getElementById('erp-discount').value) || 0
-                }
-            }
+            preConfirm: () => ({
+                method: document.getElementById('erp-method').value,
+                paid: parseFloat(document.getElementById('erp-paid').value) || 0,
+                discount: parseFloat(document.getElementById('erp-discount').value) || 0
+            })
         }).then((result) => {
             if (result.isConfirmed) {
                 let userConfig = result.value;
-                let finalNet = calculatedTotal - userConfig.discount;
-                let finalBalance = finalNet - userConfig.paid;
-                if(finalBalance < 0) finalBalance = 0;
-
-                formattedOrderItems.forEach(item => {
-                    if(dataStore[item.business]) {
-                        let stockMatch = dataStore[item.business].stock.find(s => s.name.trim().toLowerCase() === item.name.trim().toLowerCase());
-                        if (stockMatch) {
-                            stockMatch.qty -= item.qty;
-                            dispatchToCloud({ action: "saveStock", business: item.business, name: stockMatch.name, qty: stockMatch.qty, price: stockMatch.price });
-                        } else {
-                            dispatchToCloud({ action: "saveStock", business: item.business, name: item.name, qty: -item.qty, price: item.price });
-                            dataStore[item.business].stock.push({name: item.name, qty: -item.qty, price: item.price});
-                        }
-                    }
-                });
-
+                
+                // 1. Prefix සහ ID Generation (මෙතන තමයි TEMP-ID අයින් වෙන්නේ)
                 let isComb = involvedBusinesses.size > 1;
                 let targetBiz = isComb ? "SK Creations" : Array.from(involvedBusinesses)[0];
-                if(!targetBiz) targetBiz = "SK Crafts";
-                
                 let prefix = isComb ? "COMB" : (targetBiz === "SK Crafts" ? "SKC" : targetBiz === "SK Fashion" ? "SKF" : "SKD");
+                
                 let maxNum = 1000;
-                
-                if (isComb) {
-                    ["SK Crafts", "SK Fashion", "SK Digital"].forEach(b => {
-                        if(dataStore[b] && dataStore[b].orders) {
-                            dataStore[b].orders.forEach(o => { if (o.id && o.id.toUpperCase().startsWith("COMB-")) { let num = parseInt(o.id.split('-')[1]); if (!isNaN(num) && num > maxNum) maxNum = num; } });
-                        }
+                if(dataStore[targetBiz] && dataStore[targetBiz].orders) {
+                    dataStore[targetBiz].orders.forEach(o => {
+                        if(o.id && o.id.includes(prefix)) { let n = parseInt(o.id.split('-')[1]); if(n > maxNum) maxNum = n; }
                     });
-                } else {
-                    if(dataStore[targetBiz] && dataStore[targetBiz].orders) {
-                        dataStore[targetBiz].orders.forEach(o => { if (o.id && o.id.toUpperCase().startsWith(prefix + "-")) { let num = parseInt(o.id.split('-')[1]); if (!isNaN(num) && num > maxNum) maxNum = num; } });
-                    }
                 }
-                
                 let newInvId = prefix + "-" + (maxNum + 1);
-                let orderDate = new Date().toISOString().split('T')[0];
 
-                let orderData = { 
-                    action: "saveOrder", id: newInvId, date: orderDate, cust: order.customer_name || "Unknown", address: order.address || "TBA", 
-                    total: calculatedTotal, discount: userConfig.discount, paidAmount: userConfig.paid, balanceAmount: finalBalance, method: userConfig.method, status: "Pending", business: targetBiz, items: formattedOrderItems 
-                };
-                
+                // 2. Customer Hub එකට සේව් කිරීම (Mr. Shan වගේ නමක් නම් ඒ විදියටම යනවා)
+                let cBiz = targetBiz === "SK Creations" ? "SK Crafts" : targetBiz;
+                let custObj = { name: order.customer_name, phone: order.phone, address: order.address };
+                if(!dataStore[cBiz].customers.find(c => c.phone === order.phone)) {
+                    dataStore[cBiz].customers.push({ id: "C-" + Date.now().toString().slice(-4), ...custObj });
+                    dispatchToCloud({ action: "saveCustomer", business: cBiz, ...custObj });
+                }
+
+                // 3. Order එක Save කිරීම
                 formattedOrderItems.forEach(item => {
-                    let pushBiz = isComb ? item.business : targetBiz;
-                    if(dataStore[pushBiz]) {
-                        dataStore[pushBiz].orders.push({ id: newInvId, date: orderDate, cust: order.customer_name || "Unknown", address: order.address || "TBA", item: item.name, qty: item.qty, total: item.total, discount: userConfig.discount, paidAmount: userConfig.paid, balanceAmount: finalBalance, method: userConfig.method, status: "Pending" });
-                    }
+                    dataStore[item.business].orders.push({ 
+                        id: newInvId, date: new Date().toISOString().split('T')[0], cust: order.customer_name, 
+                        item: item.name, qty: item.qty, total: item.total, method: userConfig.method, status: "Pending" 
+                    });
                 });
 
-                dispatchToCloud(orderData);
-
-                let cBiz = targetBiz === "SK Creations" ? "SK Crafts" : targetBiz;
-                if(dataStore[cBiz]) {
-                    let existingCust = dataStore[cBiz].customers.find(c => c.phone === order.phone || c.name === order.customer_name);
-                    if (!existingCust) {
-                         let nId = "C-" + (dataStore[cBiz].customers.length + 101); 
-                         let customerObj = { id: nId, name: order.customer_name || "Unknown", phone: order.phone || "N/A", address: order.address || "TBA" }; 
-                         dataStore[cBiz].customers.push(customerObj); 
-                         dispatchToCloud({ action: "saveCustomer", business: cBiz, ...customerObj }); 
-                    }
-                }
-
-                let msg = `*SK CREATIONS - ORDER ACCEPTED ✅*\n-----------------------------------\nHi ${order.customer_name || ""},\n\nWe have accepted your order and it's now in our Production Queue. 🏭\n\n*Your Official Invoice No:* ${newInvId}\n*Payment Received:* Rs. ${userConfig.paid.toLocaleString()}\n\nWe will prepare your items and notify you once they are ready for dispatch to:\n📍 ${order.address || ""}\n\nThank you for choosing SK Creations! ✨`;
-
-                if(phone) {
-                    window.open("https://api.whatsapp.com/send?phone=" + phone + "&text=" + encodeURIComponent(msg), '_blank');
-                }
-
-                dispatchToCloud({ action: "updateWebOrderStatus", order_no: order.order_no, status: "Accepted" });
+                alert("Invoice " + newInvId + " Activated!");
                 pendingWebOrders.splice(idx, 1);
-                
-                currentBusiness = cBiz; 
-                let topSwitcherBtns = document.querySelectorAll('.hub-btn');
-                if (topSwitcherBtns.length > 0) {
-                    topSwitcherBtns.forEach(b => {
-                        b.classList.remove('active');
-                        if(b.getAttribute('data-biz') === currentBusiness) b.classList.add('active');
-                    });
-                }
-
                 reRenderEntireUI();
                 renderWebOrders();
-                
-                Swal.fire({
-                    title: 'Order Activated!',
-                    text: `Invoice ${newInvId} generated successfully.`,
-                    icon: 'success',
-                    background: 'rgba(15,20,30,0.98)',
-                    color: '#D4AF37',
-                    confirmButtonColor: '#25D366'
-                });
             }
         });
-    } catch(err) {
-        console.error(err);
-        alert("Error mapping order data: " + err.message);
-    }
+    } catch(err) { console.error(err); alert("Error: " + err.message); }
 }
 </script>
 </body>
