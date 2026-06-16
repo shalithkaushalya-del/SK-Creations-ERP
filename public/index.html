@@ -27,9 +27,15 @@
         .main-content { flex: 1; padding: 40px; overflow-y: auto; }
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 35px; }
         .header h1 { font-size: 28px; font-weight: 800; color: var(--gold-light); text-shadow: 0 2px 10px rgba(0,0,0,0.8); }
+        
+        /* 🔥 CSS Fix: Customer Hub එකේදී Biz Hub එක හංගනවා 🔥 */
         .biz-hub { display: flex; gap: 12px; background: rgba(15, 20, 30, 0.7); backdrop-filter: blur(10px); padding: 6px; border-radius: 14px; border: 1px solid rgba(212, 175, 55, 0.2); box-shadow: 0 5px 15px rgba(0,0,0,0.4); }
         .hub-btn { padding: 10px 20px; border: none; border-radius: 10px; font-weight: 700; cursor: pointer; transition: all 0.3s; color: var(--gold-primary); background: transparent; font-size: 14px; }
         .hub-btn.active { background: var(--gold-primary) !important; color: #111 !important; box-shadow: 0 0 20px rgba(212, 175, 55, 0.6) !important; }
+        
+        /* මේක තමයි මැජික් එක */
+        .hide-biz-hub .biz-hub { display: none !important; }
+
         .app-view { display: none; }
         .app-view.active { display: block; }
         .card { background: rgba(15, 20, 30, 0.80); backdrop-filter: blur(20px); padding: 30px; border-radius: 16px; border: 1px solid rgba(212, 175, 55, 0.2); margin-bottom: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.6); }
@@ -101,7 +107,7 @@
                 <button class="nav-btn" onclick="logoutSystem()" style="margin-top:auto; color:#ff4757; background:rgba(255,71,87,0.1);">🔓 Terminate Session</button>
             </div>
 
-            <div class="main-content">
+            <div class="main-content" id="mainContentArea">
                 <div class="header">
                     <h1 id="pageTitle">Dashboard</h1>
                     <div style="display:flex; align-items:center; gap: 15px;">
@@ -678,7 +684,9 @@
                     dataStore["SK Fashion"] = { orders: [], stock: [], customers: [], expenses: [], quotations: [], deliveries: [], raw_materials: [], payroll: [] };
                     dataStore["SK Digital"] = { orders: [], stock: [], customers: [], expenses: [], quotations: [], deliveries: [], raw_materials: [], payroll: [] };
 
-                    if(cloudMaster.stock) { cloudMaster.stock.forEach(item => { let targetBiz = item.business; if(targetBiz === "SK Creations") targetBiz = "SK Crafts"; if(dataStore[targetBiz]) { dataStore[targetBiz].stock.push({ name: item.name, qty: item.qty, price: item.price }); } }); }
+                    // 🔥 STOCK BUG FIX 🔥
+                    if(cloudMaster.stock) { cloudMaster.stock.forEach(item => { if (/^(SKC|SKF|SKD|COMB|Q-)/i.test(item.name.trim())) return; let targetBiz = item.business; if(targetBiz === "SK Creations") targetBiz = "SK Crafts"; if(dataStore[targetBiz]) { dataStore[targetBiz].stock.push({ name: item.name, qty: item.qty, price: item.price }); } }); }
+                    
                     if(cloudMaster.customers) { cloudMaster.customers.forEach(c => { let targetBiz = c.business; if(targetBiz === "SK Creations") targetBiz = "SK Crafts"; if(dataStore[targetBiz]) { dataStore[targetBiz].customers.push({ id: c.id, name: c.name, phone: c.phone, address: c.address }); } }); }
                     if(cloudMaster.orders) { cloudMaster.orders.forEach(o => { let targetBiz = o.business; if(targetBiz === "SK Creations") targetBiz = "SK Crafts"; o.discount = parseFloat(o.discount) || 0; o.status = o.status || "Pending"; if(dataStore[targetBiz]) { dataStore[targetBiz].orders.push(o); } }); }
                     if(cloudMaster.expenses) { cloudMaster.expenses.forEach(e => { let targetBiz = e.business; if(targetBiz === "SK Creations") targetBiz = "SK Crafts"; if(dataStore[targetBiz]) { dataStore[targetBiz].expenses.push(e); } }); }
@@ -837,13 +845,13 @@
             if(element) { element.classList.add('active'); element.style.borderLeftColor = "var(--gold-primary)"; } 
             else { let fallbackBtn = document.getElementById('btn_' + viewId.split('-')[0] + '-view'); if(fallbackBtn) { fallbackBtn.classList.add('active'); fallbackBtn.style.borderLeftColor = "var(--gold-primary)"; } }
 
-            // 🔥 Hide Top Switcher for Combined AND Customer Hub 🔥
-            let switcher = document.getElementById('topBizSwitcher');
+            // 🔥 CSS CLASS ADD/REMOVE FOR HIDING BIZ HUB 🔥
+            let contentArea = document.getElementById('mainContentArea');
             if(viewId === "combined-view" || viewId === "customer-view") { 
-                if(switcher) switcher.style.display = "none"; 
+                contentArea.classList.add('hide-biz-hub');
                 if(viewId === "combined-view") { updateCombItemDropdown(); }
             } else { 
-                if(switcher) switcher.style.display = "flex"; 
+                contentArea.classList.remove('hide-biz-hub');
             }
             
             let titleEl = document.getElementById('pageTitle');
